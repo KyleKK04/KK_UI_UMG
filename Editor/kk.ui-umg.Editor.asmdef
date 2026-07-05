@@ -1,0 +1,22 @@
+{
+  "name": "kk.ui-umg.Editor",
+  "rootNamespace": "KK.UI.UMG.Editor",
+  "references": [
+    "kk.ui-umg.Runtime",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI",
+    "Unity.Addressables.Editor",
+    "Unity.Newtonsoft.Json"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

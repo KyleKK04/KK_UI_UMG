@@ -1,0 +1,4 @@
+interface:
+  display_name: "KK_UI_UMG"
+  short_description: "Author KK_UI_UMG UI and service adapters"
+  default_prompt: "Use $kk-ui-umg to create or modify a Unity UI Source package or connect existing business code through a service adapter."

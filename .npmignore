@@ -1,0 +1,7 @@
+# Package development tests stay in the source repository.
+Tests/
+Tests.meta
+
+# Local/package artifacts.
+*.tgz
+.DS_Store
