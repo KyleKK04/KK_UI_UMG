@@ -51,7 +51,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 ```text
 Package Manager
   -> Add package from git URL...
-  -> https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0
+  -> https://github.com/KyleKK04/KK_UI_UMG.git#main
 ```
 
 也可以写入 Unity 项目的 `Packages/manifest.json`：
@@ -59,7 +59,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#main"
   }
 }
 ```
@@ -68,7 +68,7 @@ Package Manager
 
 ### 方式二：从 tarball 安装
 
-从 Release 下载：
+正式 Release 后，可以从 GitHub Release 下载：
 
 ```text
 com.kk.ui-umg-1.0.0.tgz
@@ -279,7 +279,7 @@ KK_UI_UMG/Build Package
 npm pack
 ```
 
-发布 tarball 默认不包含开发期 `Tests/`。
+正式发布 tarball 默认不包含开发期 `Tests/`。
 
 ## 授权
 

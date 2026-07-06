@@ -29,6 +29,7 @@ When a user has just imported the package and wants to create their own UI, this
 - Route input events into Controller handlers only.
 - Keep View, Store, Binder, Controller, UIManager responsibilities separated.
 - Runtime opening requires a scene GameObject with the `KK.UI.UMG.UIManager` component attached.
+- After creating or modifying a UI, explain the `UIManager` interface needed to open the generated prefab at runtime.
 - Run Validate / Generate / Verify when Unity Editor access is available; otherwise tell the user exactly what remains to run.
 
 ## Workflow
@@ -43,6 +44,7 @@ When a user has just imported the package and wants to create their own UI, this
 6. Validate, Generate, Verify if possible.
 7. Ensure `README.md` describes the package and `validation.md` contains the v0.7.1 ledger markers.
 8. Report the delivery status, any handwritten Controller handlers still needed, and the runtime setup note: add `KK.UI.UMG.UIManager` to a scene GameObject before calling `UIManager.Instance.OpenAsync("<PackageId>")`.
+9. Include the minimal `UIManager` call pattern for the generated prefab: `await UIManager.Instance.OpenAsync("<PackageId>");`.
 
 ### Modify UI
 
@@ -90,6 +92,59 @@ For a newly imported package, explain this runtime setup whenever the user asks 
 - Provides service registration for business adapters: `RegisterService<T>`, `TryGetService<T>`, `UnregisterService<T>`, and `ClearServices`.
 - Subscribes generated MessageBus routes so configured bus messages can open or close UI through `UIManager`.
 
+Use this public interface cheat sheet when explaining how a generated prefab is used:
+
+```csharp
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using KK.UI.UMG;
+using KK.UI.UMG.Internal;
+using UnityEngine;
+
+public sealed class UIManager : MonoBehaviour
+{
+    public static UIManager Instance { get; }
+
+    public Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null);
+    public Task CloseAsync(string systemId);
+
+    public bool IsOpen(string systemId);
+    public UIState GetState(string systemId);
+    public UIViewBase GetTopLayer();
+    public IReadOnlyList<string> GetLayerStack();
+
+    public void RegisterService<T>(T service) where T : class;
+    public bool TryGetService<T>(out T service) where T : class;
+    public void UnregisterService<T>() where T : class;
+    public void ClearServices();
+}
+```
+
+Minimal open example:
+
+```csharp
+using KK.UI.UMG;
+using UnityEngine;
+
+public sealed class UIBootstrap : MonoBehaviour
+{
+    private async void Start()
+    {
+        await UIManager.Instance.OpenAsync("InventoryPanel");
+    }
+}
+```
+
+Payload example:
+
+```csharp
+var payload = new MessagePayload();
+payload.Set("itemId", "sword_001");
+await UIManager.Instance.OpenAsync("ItemDetailPanel", payload);
+```
+
+Generated prefabs are not normally opened by dragging them into the scene. The runtime path is `UIManager.OpenAsync(systemId)`, where `systemId` is the Source `packageId` and the Addressables key is `UI/<PackageId>/<PackageId>View`.
+
 Generated runtime code registers Controller factories during load. Do not put Controller components on the prefab and do not make Controller singletons. The prefab carries the generated View; `UIManager` creates the Controller for each Open and destroys it on Close.
 
 When a UI declares `codegen.requiredServices`, the scene must register those services on `UIManager` before opening that UI. Business adapters should register in `OnEnable` and unregister in `OnDisable` or equivalent lifecycle code.
@@ -100,6 +155,7 @@ When a UI declares `codegen.requiredServices`, the scene must register those ser
 - Read `references/authoring-checklist.md` before finalizing changes or explaining delivery status.
 - Read `references/examples.md` before choosing a pattern for dialogs, inventory/list panels, or layout component galleries.
 - Read `references/business-adapter.md` before connecting UI to existing gameplay/business code.
+- Read `references/uimanager-runtime.md` before explaining runtime open/close code, writing bootstrap examples, or connecting a generated prefab to scene code.
 
 ## MVVM-C Rules
 

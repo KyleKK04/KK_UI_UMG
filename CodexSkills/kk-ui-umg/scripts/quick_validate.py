@@ -10,6 +10,7 @@ REQUIRED_FILES = [
     "references/authoring-checklist.md",
     "references/examples.md",
     "references/business-adapter.md",
+    "references/uimanager-runtime.md",
     "scripts/install_skill.py",
 ]
 REQUIRED_TEXT = [
@@ -21,6 +22,8 @@ REQUIRED_TEXT = [
     "Runtime Setup And UIManager",
     "KK.UI.UMG.UIManager",
     "UIManager.Instance.OpenAsync",
+    "OpenAsync(string systemId",
+    "RegisterService<T>",
 ]
 
 
