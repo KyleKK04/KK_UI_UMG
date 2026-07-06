@@ -100,10 +100,6 @@ namespace KK.UI.UMG.Editor.Generators
             builder.AppendLine("using System.Collections.Generic;");
             builder.AppendLine("using KK.UI.UMG;");
             builder.AppendLine("using KK.UI.UMG.Binding;");
-            if (GetLocalizedTextBindings(context).Any())
-            {
-                builder.AppendLine("using KK.UI.UMG.Localization;");
-            }
             if (context.Bindings.Events.Any(evt => !string.IsNullOrWhiteSpace(evt.Channel)))
             {
                 builder.AppendLine("using KK.UI.UMG.MessageBus;");
@@ -140,7 +136,6 @@ namespace KK.UI.UMG.Editor.Generators
             builder.AppendLine("            });");
             builder.AppendLine("        }");
             builder.AppendLine();
-            var localizedTextBindings = GetLocalizedTextBindings(context).ToList();
             builder.AppendLine("        public override void Initialize(MessagePayload payload)");
             builder.AppendLine("        {");
             foreach (var service in GetRequiredServices(context))
@@ -148,13 +143,6 @@ namespace KK.UI.UMG.Editor.Generators
                 builder.AppendLine($"            {service.Property} = RequireService<{ToGlobalTypeName(service.Type)}>();");
             }
 
-            if (localizedTextBindings.Count > 0)
-            {
-                foreach (var binding in localizedTextBindings)
-                {
-                    builder.AppendLine($"            Store.Update({context.Codegen.ViewModel.ClassName}.Fields.{ToPascal(binding.fieldId)}, UILocalizationService.Instance.Resolve(SystemId, {context.Package.PackageId}Strings.{ToStringKeyConstantName(binding.locKey)}));");
-                }
-            }
             builder.AppendLine("            OnGeneratedInitialize(payload);");
             builder.AppendLine("            OnInitializeCore(payload);");
             builder.AppendLine("        }");
@@ -486,25 +474,6 @@ namespace {context.Codegen.Namespace}
         private static string ToStringKeyConstantName(string value)
         {
             return string.Concat(value.Split('_', '-', '.', ' ').Where(part => part.Length > 0).Select(part => char.ToUpperInvariant(part[0]) + part.Substring(1)));
-        }
-
-        private static IEnumerable<(string controlId, string fieldId, string locKey)> GetLocalizedTextBindings(KKUIPipelineContext context)
-        {
-            var bindings = context.Bindings.Bindings.ToDictionary(binding => binding.ControlId, binding => binding);
-            var result = new List<(string controlId, string fieldId, string locKey)>();
-            ValidatorUtilityProxy.Walk(context.Layout.Root, node =>
-            {
-                if (node.Type != "Text" || string.IsNullOrWhiteSpace(node.Text?.LocKey))
-                {
-                    return;
-                }
-
-                if (bindings.TryGetValue(node.Id, out var binding))
-                {
-                    result.Add((node.Id, binding.FieldId, node.Text.LocKey));
-                }
-            });
-            return result;
         }
 
         private static string GetBusConstantName(KKUIPipelineContext context, string relativeChannel)

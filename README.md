@@ -195,6 +195,12 @@ UGUI event
 - Binder 只把 Store 写回 UGUI。
 - UIManager 负责加载、打开、关闭、释放和生命周期。
 
+### 静态文本和动态文本分流
+
+静态标题、按钮文案、Label、placeholder 和固定提示写在 `strings.json`，由 `layout.json` 的 `locKey` 引用，生成 Prefab 时写入 TMP 文本，不进入 Store。
+
+只有运行时会变化、来自业务 Service、数量/进度/状态、玩家/物品/任务信息或列表 item 文本，才进入 `bindings.json`、`Store.Update(...)` 和 Binder 刷新链路。
+
 ### Source / Generated / Handwritten 分离
 
 ```text

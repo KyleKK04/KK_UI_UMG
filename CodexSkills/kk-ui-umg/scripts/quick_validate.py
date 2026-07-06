@@ -24,6 +24,9 @@ REQUIRED_TEXT = [
     "UIManager.Instance.OpenAsync",
     "OpenAsync(string systemId",
     "RegisterService<T>",
+    "Static UI copy uses",
+    "dynamic Store fields",
+    "locKey",
 ]
 
 

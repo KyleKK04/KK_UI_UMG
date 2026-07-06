@@ -37,13 +37,8 @@ namespace KK.UI.UMG.Editor.Validators
         public void Validate(KKUIPipelineContext context)
         {
             var nodesById = new Dictionary<string, UiLayoutNode>();
-            ValidatorUtility.Walk(context.Layout.Root, node =>
-            {
-                if (!string.IsNullOrWhiteSpace(node.Id))
-                {
-                    nodesById[node.Id] = node;
-                }
-            });
+            var parentsById = new Dictionary<string, UiLayoutNode>();
+            IndexLayout(context.Layout.Root, null, nodesById, parentsById);
             var fields = context.Bindings.Mvvm != null && context.Bindings.Mvvm.Fields != null
                 ? context.Bindings.Mvvm.Fields
                 : new List<UiViewModelFieldSpec>();
@@ -71,7 +66,7 @@ namespace KK.UI.UMG.Editor.Validators
                     context.Add(KKUIPipelineIssueSeverity.Error, "BND003", $"Binding mode '{binding.Mode}' is not supported.");
                 }
 
-                ValidateProperty(context, node, binding, field);
+                ValidateProperty(context, node, binding, field, parentsById);
             }
 
             foreach (var evt in context.Bindings.Events)
@@ -106,13 +101,25 @@ namespace KK.UI.UMG.Editor.Validators
             ValidateVerticalListSpecs(context, context.Layout.Root, fieldsById);
         }
 
-        private static void ValidateProperty(KKUIPipelineContext context, UiLayoutNode node, UiBindingSpec binding, UiViewModelFieldSpec field)
+        private static void ValidateProperty(KKUIPipelineContext context, UiLayoutNode node, UiBindingSpec binding, UiViewModelFieldSpec field, Dictionary<string, UiLayoutNode> parentsById)
         {
             if (!SupportedProperties.TryGetValue(node.Type, out var properties) ||
                 !properties.TryGetValue(binding.Property, out var allowedTypes))
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "BND008", $"Property '{binding.Property}' is not supported for control '{binding.ControlId}' of type '{node.Type}'.");
                 return;
+            }
+
+            if (node.Type == "Text" &&
+                binding.Property == "text" &&
+                !string.IsNullOrWhiteSpace(node.Text?.LocKey))
+            {
+                if (HasAncestorOfType(node, parentsById, "Button"))
+                {
+                    context.Add(KKUIPipelineIssueSeverity.Warning, "TXT004", $"Static button text node '{node.Id}' uses locKey '{node.Text.LocKey}' and should not generate Store field '{binding.FieldId}'.");
+                }
+
+                context.Add(KKUIPipelineIssueSeverity.Error, "TXT003", $"Text node '{node.Id}' cannot define both locKey '{node.Text.LocKey}' and a dynamic text binding.");
             }
 
             if (!allowedTypes.Contains(field.Type))
@@ -127,6 +134,44 @@ namespace KK.UI.UMG.Editor.Validators
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "BND005", $"Event '{evt.Event}' is not supported for control '{evt.ControlId}' of type '{node.Type}'.");
             }
+        }
+
+        private static void IndexLayout(UiLayoutNode node, UiLayoutNode parent, Dictionary<string, UiLayoutNode> nodesById, Dictionary<string, UiLayoutNode> parentsById)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.Id))
+            {
+                nodesById[node.Id] = node;
+                if (parent != null)
+                {
+                    parentsById[node.Id] = parent;
+                }
+            }
+
+            foreach (var child in node.Children ?? new List<UiLayoutNode>())
+            {
+                IndexLayout(child, node, nodesById, parentsById);
+            }
+        }
+
+        private static bool HasAncestorOfType(UiLayoutNode node, Dictionary<string, UiLayoutNode> parentsById, string type)
+        {
+            var current = node;
+            while (current != null && !string.IsNullOrWhiteSpace(current.Id) && parentsById.TryGetValue(current.Id, out var parent))
+            {
+                if (parent.Type == type)
+                {
+                    return true;
+                }
+
+                current = parent;
+            }
+
+            return false;
         }
 
         private static void ValidateVerticalListSpecs(KKUIPipelineContext context, UiLayoutNode root, Dictionary<string, UiViewModelFieldSpec> fieldsById)

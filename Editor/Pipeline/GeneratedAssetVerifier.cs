@@ -134,6 +134,11 @@ namespace KK.UI.UMG.Editor.Pipeline
                 }
             }
 
+            if (TryRead(scripts["controller"], out var controllerSource))
+            {
+                VerifyNotContains(context, controllerSource, "UILocalizationService.Instance.Resolve", "VER034", "Controller.Generated.cs must not resolve static localization at runtime. Static locKey text is written during prefab generation.");
+            }
+
             return verified;
         }
 
@@ -143,7 +148,7 @@ namespace KK.UI.UMG.Editor.Pipeline
             var binderPath = Path.Combine(runtimeRoot, "Binding", "UguiBinder.cs");
             if (TryRead(binderPath, out var binderSource))
             {
-                VerifyNotContains(context, binderSource, "UILocalizationService", "VER025", "UguiBinder must not access localization directly. Controller initializes localized Store values.");
+                VerifyNotContains(context, binderSource, "UILocalizationService", "VER025", "UguiBinder must not access localization directly. Static locKey text is resolved during prefab generation; dynamic text comes from Store.");
                 VerifyNotContains(context, binderSource, "RequireService<", "VER033", "UguiBinder must not resolve business services.");
                 VerifyNotContains(context, binderSource, "TryGetService<", "VER033", "UguiBinder must not resolve business services.");
             }

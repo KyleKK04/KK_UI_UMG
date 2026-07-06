@@ -8,6 +8,7 @@ Use this checklist before returning work to the user.
 - For new UI packages, read the closest Source examples listed in `examples.md`.
 - Identify whether the user asked for Source authoring only, runtime behavior, or both.
 - Treat new UI requests as UI-first unless the user explicitly asks to connect business data.
+- Classify text before writing manifests: static copy uses `locKey` + `strings.json`; runtime-changing text uses `bindings.json` + Store.
 - Confirm missing information only when guessing would change schema, ids, assets, or behavior.
 
 ## New Package
@@ -15,6 +16,9 @@ Use this checklist before returning work to the user.
 - Create only `Assets/UI/Source/<PackageId>/` files and optional `Assets/`.
 - Write `package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, and `validation.md`.
 - Keep node ids, field ids, loc keys, and asset ids stable and unique.
+- Put static titles, button text, labels, placeholders, section headers, and fixed empty prompts in `strings.json` and reference them by `layout.json` `locKey`.
+- Do not create Store fields or `text` bindings for static copy.
+- Create Text fields and `text` bindings only for runtime-changing, business-derived, count/progress/status, player/item/task, or list item text.
 - Use `layoutComponents` for structural layout.
 - Use `layoutElement` for stable button, input, text, and list item sizing.
 - Keep `v1.controls` limited to the controls used.
@@ -28,6 +32,7 @@ Use this checklist before returning work to the user.
 - Read every manifest before changing one.
 - Do not guess ids or handlers.
 - For a new Button, update layout, bindings events, and strings.
+- For static Button labels, update the child Text `locKey` and `strings.json`; do not add a ButtonText Store field or binding.
 - For a new Toggle / Slider / InputField / Dropdown, update layout, bindings fields, property bindings, events, and strings.
 - For a new list field, update the `VerticalList` item template and item bindings.
 - For a new image or sprite, verify the real asset path and update `assets.json`.
@@ -41,6 +46,8 @@ Use this checklist before returning work to the user.
 - Controller handles behavior and writes Store.
 - Store is the only display state source.
 - Binder reads Store and writes UGUI only.
+- Static locKey text is written during prefab generation. Controller, View, and Binder do not resolve static localization at runtime.
+- A Text node cannot have both static `locKey` and dynamic `text` binding.
 - UIListView does not call business logic.
 - MessageBus does not create View or Controller.
 - Business services are accessed only from handwritten Controller partial code.
@@ -82,7 +89,7 @@ Include:
 
 - Source package path changed or created.
 - Manifest files changed.
-- Store fields generated or changed.
+- Dynamic Store fields generated or changed. Do not list static locKey copy as Store fields.
 - Controller events generated or changed.
 - Handwritten Controller handlers still needed.
 - Required business services declared or changed.

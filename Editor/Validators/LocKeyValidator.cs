@@ -14,10 +14,8 @@ namespace KK.UI.UMG.Editor.Validators
         {
             ValidateStringManifest(context);
 
-            var fields = (context.Bindings.Mvvm?.Fields ?? new List<UiViewModelFieldSpec>())
-                .ToDictionary(field => field.Id, field => field.Type);
-            var bindingsByControl = context.Bindings.Bindings.ToDictionary(binding => binding.ControlId, binding => binding);
             var usedKeys = new HashSet<string>();
+            var reportedMissingKeys = new HashSet<string>();
 
             ValidatorUtility.Walk(context.Layout.Root, node =>
             {
@@ -35,38 +33,33 @@ namespace KK.UI.UMG.Editor.Validators
 
                 if (string.IsNullOrWhiteSpace(node.Text.LocKey))
                 {
-                    return;
-                }
-                if (!context.Strings.Strings.ContainsKey(node.Text.LocKey))
-                {
-                    context.Add(KKUIPipelineIssueSeverity.Error, "LOC004", $"Text node '{node.Id}' references missing locKey '{node.Text.LocKey}'.");
-                }
-
-                if (!bindingsByControl.TryGetValue(node.Id, out var binding))
-                {
-                    context.Add(KKUIPipelineIssueSeverity.Error, "LOC007", $"Text node '{node.Id}' with locKey '{node.Text.LocKey}' must have a binding.");
+                    if (!string.IsNullOrWhiteSpace(node.Text.Value))
+                    {
+                        context.Add(KKUIPipelineIssueSeverity.Warning, "TXT001", $"Text node '{node.Id}' has static literal text and should use locKey with strings.json.");
+                    }
                     return;
                 }
 
-                if (!fields.TryGetValue(binding.FieldId, out var type) || type != "string")
+                if (!HasDefaultTranslation(context, node.Text.LocKey))
                 {
-                    context.Add(KKUIPipelineIssueSeverity.Error, "LOC008", $"Text node '{node.Id}' locKey binding field '{binding.FieldId}' must be a string field.");
+                    context.Add(KKUIPipelineIssueSeverity.Error, "TXT002", $"Text node '{node.Id}' locKey '{node.Text.LocKey}' must exist in strings.json defaultCulture '{context.Strings.DefaultCulture}'.");
+                    reportedMissingKeys.Add(node.Text.LocKey);
                 }
             });
 
             foreach (var key in usedKeys)
             {
-                if (!context.Strings.Strings.ContainsKey(key))
+                if (!reportedMissingKeys.Contains(key) && !HasDefaultTranslation(context, key))
                 {
-                    context.Add(KKUIPipelineIssueSeverity.Error, "LOC004", $"Layout references missing locKey '{key}'.");
+                    context.Add(KKUIPipelineIssueSeverity.Error, "TXT002", $"Layout locKey '{key}' must exist in strings.json defaultCulture '{context.Strings.DefaultCulture}'.");
                 }
             }
 
-            foreach (var key in context.Strings.Strings.Keys)
+            foreach (var key in (context.Strings.Strings ?? new Dictionary<string, Dictionary<string, string>>()).Keys)
             {
                 if (!usedKeys.Contains(key))
                 {
-                    context.Add(KKUIPipelineIssueSeverity.Warning, "LOC009", $"String key '{key}' is declared but not referenced by layout locKey.");
+                    context.Add(KKUIPipelineIssueSeverity.Warning, "TXT005", $"String key '{key}' is declared but not referenced by layout locKey.");
                 }
             }
 
@@ -77,7 +70,9 @@ namespace KK.UI.UMG.Editor.Validators
                     continue;
                 }
 
-                var missingAny = context.Strings.Strings.Values.Any(values => !values.ContainsKey(culture));
+                var missingAny = (context.Strings.Strings ?? new Dictionary<string, Dictionary<string, string>>())
+                    .Values
+                    .Any(values => values == null || !values.ContainsKey(culture));
                 if (missingAny)
                 {
                     context.Add(KKUIPipelineIssueSeverity.Warning, "LOC010", $"Culture '{culture}' is missing one or more optional translations; runtime will fallback to '{context.Strings.DefaultCulture}'.");
@@ -103,6 +98,20 @@ namespace KK.UI.UMG.Editor.Validators
             {
                 usedKeys.Add(locKey);
             }
+        }
+
+        private static bool HasDefaultTranslation(KKUIPipelineContext context, string locKey)
+        {
+            if (string.IsNullOrWhiteSpace(locKey) ||
+                string.IsNullOrWhiteSpace(context.Strings.DefaultCulture) ||
+                context.Strings.Strings == null ||
+                !context.Strings.Strings.TryGetValue(locKey, out var values) ||
+                values == null)
+            {
+                return false;
+            }
+
+            return values.ContainsKey(context.Strings.DefaultCulture);
         }
 
         private static void ValidateStringManifest(KKUIPipelineContext context)
@@ -136,7 +145,7 @@ namespace KK.UI.UMG.Editor.Validators
             }
 
             var constantNames = new HashSet<string>();
-            foreach (var key in context.Strings.Strings.Keys)
+            foreach (var key in (context.Strings.Strings ?? new Dictionary<string, Dictionary<string, string>>()).Keys)
             {
                 var constantName = ToPascal(key);
                 if (!constantNames.Add(constantName))

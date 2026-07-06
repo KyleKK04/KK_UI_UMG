@@ -1,0 +1,28 @@
+{
+  "name": "kk.ui-umg.Editor.Tests",
+  "rootNamespace": "KK.UI.UMG.Editor.Tests",
+  "references": [
+    "kk.ui-umg.Runtime",
+    "kk.ui-umg.Editor",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI",
+    "Unity.Addressables.Editor",
+    "Unity.Newtonsoft.Json"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

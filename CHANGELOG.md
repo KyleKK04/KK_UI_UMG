@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added v0.9.3 Text / Localization authoring rules: static UI copy uses `locKey` plus `strings.json`, while runtime-changing text uses bindings, Store, and Binder.
+- Validator now reports `TXT001`, `TXT002`, `TXT003`, `TXT004`, and `TXT005` for static/dynamic Text boundary issues.
+- Generated Controllers no longer initialize Store fields from static `locKey` text.
+
 ## 1.0.0
 
 - Package id is `com.kk.ui-umg`.

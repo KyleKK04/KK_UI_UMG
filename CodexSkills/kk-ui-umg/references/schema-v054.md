@@ -174,9 +174,21 @@ Hard rules:
 
 Field rules:
 
+- Static titles, button labels, labels, placeholders, section headers, and fixed empty prompts do not need fields.
+- Static Text should use `layout.json` `locKey` plus `strings.json`, not a `text` binding.
+- A Text node with `locKey` must not also have a dynamic `text` binding.
+- Only runtime-changing or business-derived Text needs a field and `text` binding.
 - Runtime-refreshed text, image, interactable state, input values, and list items need fields.
 - List data uses `IReadOnlyList<MessagePayload>`.
 - Do not invent business-specific strong model types in Source JSON. Business models stay behind Controller services and are mapped into Store fields or `MessagePayload` items.
+
+Text / localization validator codes:
+
+- `TXT001` Warning: static literal Text should use `locKey`.
+- `TXT002` Error: `locKey` must exist in the default language in `strings.json`.
+- `TXT003` Error: one Text node cannot have both `locKey` and dynamic `text` binding.
+- `TXT004` Warning: static Button label Text should not generate a Store field.
+- `TXT005` Warning: unused `strings.json` keys do not block generation.
 
 Event rules:
 
@@ -197,9 +209,10 @@ For `VerticalList`, declare the concrete clickable item control in `layout.json`
 
 Rules:
 
-- Put static UI copy in `strings.json`.
+- Put static UI copy in `strings.json`: titles, labels, button text, placeholders, section headers, and fixed empty prompts.
 - Include `zh-Hans` and `en-US` when adding new copy unless the user says otherwise.
-- Static layout text should reference `locKey`.
+- Static layout text should reference `locKey` and should not create a ViewModel field or `bindings.json` entry.
+- Do not put runtime data in `strings.json`, including player names, item names, counts, progress, task instance text, or service-returned status/error details.
 - Do not add parameter-format expressions in this version.
 
 ## assets.json

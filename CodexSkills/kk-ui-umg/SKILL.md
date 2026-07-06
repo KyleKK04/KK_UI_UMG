@@ -21,6 +21,10 @@ When a user has just imported the package and wants to create their own UI, this
 - If a UI needs existing business data or commands, declare `codegen.requiredServices` and create a UI-facing service adapter; do not put business model types or query logic into Source JSON.
 - Handwritten Controller partials live at `Assets/UI/<PackageId>/<PackageId>Controller.cs`. Do not create `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials under `Assets/UI/Generated/`.
 - If stale Generated scripts would make a generated service property unavailable, handwritten Controller code may call `RequireService<T>()` directly while keeping `codegen.requiredServices` declared.
+- Static UI copy uses `layout.json` `locKey` plus `strings.json`. Static titles, labels, button text, placeholders, section headers, and fixed empty prompts do not need `bindings.json` fields, Store fields, Controller initialization, or Binder refresh.
+- Dynamic Text enters `bindings.json` only when it changes at runtime, comes from business data, service callbacks, counts, progress, status, player data, item data, task data, or list item data.
+- Do not put runtime data such as player names, item names, counts, task instance text, or service error details in `strings.json`.
+- A Text node must not have both a static `locKey` and a dynamic `text` binding.
 - Do not create DemoService implementations by default. If no business exists, leave Runtime pending.
 - Do not introduce TwoWay automatic binding.
 - Do not attach arbitrary Unity components.
@@ -36,7 +40,7 @@ When a user has just imported the package and wants to create their own UI, this
 
 ### Create UI
 
-1. Extract the UI name, purpose, regions, controls, display data, list data, events, static text, and assets from the user request.
+1. Extract the UI name, purpose, regions, controls, display data, list data, events, static text, dynamic text, and assets from the user request.
 2. Ask only for missing information that would change the schema or behavior. Use safe defaults for layout and naming.
 3. Read `references/schema-v054.md` and the relevant examples listed in `references/examples.md`.
 4. Create `Assets/UI/Source/<PackageId>/package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, `validation.md`, and optional `Assets/`.
@@ -45,6 +49,7 @@ When a user has just imported the package and wants to create their own UI, this
 7. Ensure `README.md` describes the package and `validation.md` contains the v0.7.1 ledger markers.
 8. Report the delivery status, any handwritten Controller handlers still needed, and the runtime setup note: add `KK.UI.UMG.UIManager` to a scene GameObject before calling `UIManager.Instance.OpenAsync("<PackageId>")`.
 9. Include the minimal `UIManager` call pattern for the generated prefab: `await UIManager.Instance.OpenAsync("<PackageId>");`.
+10. When reporting Store fields, list dynamic Store fields only. Static locKey copy is not a Store field.
 
 ### Modify UI
 
@@ -171,6 +176,8 @@ UGUI event
 ```
 
 View forwards events only. Controller owns business and state transitions. Store is written only by Controller. Binder writes UGUI only. UIManager owns Open / Close / lifecycle. Runtime must not read Source JSON.
+
+Static Text is generated through `layout.json` `locKey` and `strings.json` during prefab generation. Controller, View, and Binder do not resolve static localization at runtime. Dynamic Text is the only text path that should use Controller `Store.Update`, `Flush`, and Binder writes.
 
 When external business data is required, the runtime chain is:
 
