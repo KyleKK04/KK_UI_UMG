@@ -259,22 +259,6 @@ CodexSkills/
 
 项目根 `Assets/` 示例、开发期测试和临时生成内容不属于发布 package。
 
-## 打包
-
-在包含该 package 的 Unity 项目中，可以使用：
-
-```text
-KK_UI_UMG/Build Package
-```
-
-也可以在 package 根目录执行：
-
-```bash
-npm pack
-```
-
-正式发布 tarball 默认不包含开发期 `Tests/`。
-
 ## 授权
 
 Copyright (c) KyleKK. All rights reserved.
