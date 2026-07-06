@@ -51,7 +51,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 ```text
 Package Manager
   -> Add package from git URL...
-  -> https://github.com/KyleKK04/KK_UI_UMG.git#main
+  -> https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0
 ```
 
 也可以写入 Unity 项目的 `Packages/manifest.json`：
@@ -59,7 +59,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#main"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0"
   }
 }
 ```
