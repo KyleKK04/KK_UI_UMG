@@ -46,16 +46,6 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 
 ### 方式一：从 GitHub 安装
 
-如果 GitHub 仓库根目录就是本 package 根目录，可以在 Unity Package Manager 中选择：
-
-```text
-Package Manager
-  -> Add package from git URL...
-  -> https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0
-```
-
-也可以写入 Unity 项目的 `Packages/manifest.json`：
-
 ```json
 {
   "dependencies": {
@@ -63,8 +53,6 @@ Package Manager
   }
 }
 ```
-
-如果仓库是私有仓库，请先确认当前机器的 GitHub 凭据或 SSH 权限已经配置好。
 
 ### 方式二：从 tarball 安装
 
