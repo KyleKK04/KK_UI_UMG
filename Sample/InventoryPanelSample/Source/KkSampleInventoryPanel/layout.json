@@ -1,0 +1,1087 @@
+{
+  "root": {
+    "type": "Panel",
+    "id": "Root",
+    "image": {
+      "color": "#080B10CC"
+    },
+    "children": [
+      {
+        "type": "Panel",
+        "id": "InventoryPanelRoot",
+        "rect": {
+          "anchorMin": [
+            0.5,
+            0.5
+          ],
+          "anchorMax": [
+            0.5,
+            0.5
+          ],
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            1080,
+            640
+          ]
+        },
+        "image": {
+          "color": "#161E2BF2",
+          "sprite": "image.inventory.panel_bg"
+        },
+        "children": [
+          {
+            "type": "Panel",
+            "id": "Header",
+            "rect": {
+              "anchorMin": [
+                0,
+                1
+              ],
+              "anchorMax": [
+                1,
+                1
+              ],
+              "position": [
+                0,
+                -45
+              ],
+              "size": [
+                -48,
+                74
+              ]
+            },
+            "image": {
+              "color": "#FFFFFF10"
+            },
+            "children": [
+              {
+                "type": "Image",
+                "id": "HeaderIcon",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    42,
+                    0
+                  ],
+                  "size": [
+                    44,
+                    44
+                  ]
+                },
+                "image": {
+                  "color": "#FFFFFFFF",
+                  "sprite": "image.inventory.header_icon"
+                }
+              },
+              {
+                "type": "Text",
+                "id": "TitleText",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    1,
+                    1
+                  ],
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "size": [
+                    -180,
+                    0
+                  ]
+                },
+                "text": {
+                  "locKey": "inventory.title",
+                  "fontSize": 34,
+                  "fontAsset": "font.default",
+                  "color": "#FFFFFFFF"
+                }
+              },
+              {
+                "type": "Button",
+                "id": "CloseButton",
+                "rect": {
+                  "anchorMin": [
+                    1,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    1,
+                    0.5
+                  ],
+                  "position": [
+                    -58,
+                    0
+                  ],
+                  "size": [
+                    88,
+                    40
+                  ]
+                },
+                "image": {
+                  "color": "#334052FF"
+                },
+                "button": {
+                  "interactable": true
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "id": "CloseLabel",
+                    "rect": {
+                      "anchorMin": [
+                        0,
+                        0
+                      ],
+                      "anchorMax": [
+                        1,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        0
+                      ],
+                      "size": [
+                        0,
+                        0
+                      ]
+                    },
+                    "text": {
+                      "locKey": "button.close",
+                      "fontSize": 20,
+                      "fontAsset": "font.default",
+                      "color": "#FFFFFFFF"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Panel",
+            "id": "FilterBar",
+            "rect": {
+              "anchorMin": [
+                0,
+                1
+              ],
+              "anchorMax": [
+                1,
+                1
+              ],
+              "position": [
+                0,
+                -118
+              ],
+              "size": [
+                -48,
+                64
+              ]
+            },
+            "image": {
+              "color": "#FFFFFF08"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "id": "SearchCaption",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    56,
+                    0
+                  ],
+                  "size": [
+                    80,
+                    30
+                  ]
+                },
+                "text": {
+                  "locKey": "filter.search",
+                  "fontSize": 20,
+                  "fontAsset": "font.default",
+                  "color": "#BFC9D7FF"
+                }
+              },
+              {
+                "type": "InputField",
+                "id": "SearchInput",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    178,
+                    0
+                  ],
+                  "size": [
+                    150,
+                    40
+                  ]
+                },
+                "inputField": {
+                  "placeholderLocKey": "filter.search_placeholder",
+                  "characterLimit": 24
+                }
+              },
+              {
+                "type": "Text",
+                "id": "CategoryCaption",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    306,
+                    0
+                  ],
+                  "size": [
+                    92,
+                    30
+                  ]
+                },
+                "text": {
+                  "locKey": "filter.category",
+                  "fontSize": 20,
+                  "fontAsset": "font.default",
+                  "color": "#BFC9D7FF"
+                }
+              },
+              {
+                "type": "Dropdown",
+                "id": "CategoryDropdown",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    424,
+                    0
+                  ],
+                  "size": [
+                    132,
+                    40
+                  ]
+                },
+                "dropdown": {
+                  "options": [
+                    {
+                      "id": "all",
+                      "locKey": "category.all"
+                    },
+                    {
+                      "id": "weapon",
+                      "locKey": "category.weapon"
+                    },
+                    {
+                      "id": "armor",
+                      "locKey": "category.armor"
+                    },
+                    {
+                      "id": "consumable",
+                      "locKey": "category.consumable"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "Toggle",
+                "id": "EquippedOnlyToggle",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    606,
+                    0
+                  ],
+                  "size": [
+                    210,
+                    40
+                  ]
+                },
+                "toggle": {
+                  "isOn": false,
+                  "labelLocKey": "filter.equipped_only"
+                }
+              },
+              {
+                "type": "Text",
+                "id": "QualityCaption",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    770,
+                    0
+                  ],
+                  "size": [
+                    84,
+                    30
+                  ]
+                },
+                "text": {
+                  "locKey": "filter.quality",
+                  "fontSize": 20,
+                  "fontAsset": "font.default",
+                  "color": "#BFC9D7FF"
+                }
+              },
+              {
+                "type": "Slider",
+                "id": "QualitySlider",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    0,
+                    0.5
+                  ],
+                  "position": [
+                    928,
+                    0
+                  ],
+                  "size": [
+                    176,
+                    40
+                  ]
+                },
+                "slider": {
+                  "minValue": 0,
+                  "maxValue": 1,
+                  "wholeNumbers": false
+                }
+              }
+            ]
+          },
+          {
+            "type": "Panel",
+            "id": "Body",
+            "rect": {
+              "anchorMin": [
+                0,
+                0
+              ],
+              "anchorMax": [
+                1,
+                1
+              ],
+              "position": [
+                0,
+                -38
+              ],
+              "size": [
+                -48,
+                -250
+              ]
+            },
+            "children": [
+              {
+                "type": "VerticalList",
+                "id": "InventoryList",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    0,
+                    1
+                  ],
+                  "position": [
+                    220,
+                    0
+                  ],
+                  "size": [
+                    440,
+                    0
+                  ]
+                },
+                "verticalList": {
+                  "itemSourceField": "InventoryItems",
+                  "itemTemplate": {
+                    "type": "Panel",
+                    "id": "InventoryItemRoot",
+                    "rect": {
+                      "anchorMin": [
+                        0,
+                        1
+                      ],
+                      "anchorMax": [
+                        1,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        0
+                      ],
+                      "size": [
+                        0,
+                        78
+                      ]
+                    },
+                    "image": {
+                      "color": "#263242E8",
+                      "sprite": "image.inventory.slot_bg"
+                    },
+                    "children": [
+                      {
+                        "type": "Image",
+                        "id": "ItemIcon",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            0.5
+                          ],
+                          "anchorMax": [
+                            0,
+                            0.5
+                          ],
+                          "position": [
+                            42,
+                            0
+                          ],
+                          "size": [
+                            52,
+                            52
+                          ]
+                        },
+                        "image": {
+                          "color": "#FFFFFFFF",
+                          "sprite": "image.inventory.item_sword"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": "ItemNameText",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            0.5
+                          ],
+                          "anchorMax": [
+                            0,
+                            0.5
+                          ],
+                          "position": [
+                            214,
+                            10
+                          ],
+                          "size": [
+                            250,
+                            30
+                          ]
+                        },
+                        "text": {
+                          "value": "Item",
+                          "fontSize": 22,
+                          "fontAsset": "font.default",
+                          "color": "#FFFFFFFF"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": "ItemCountText",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            0.5
+                          ],
+                          "anchorMax": [
+                            0,
+                            0.5
+                          ],
+                          "position": [
+                            386,
+                            -12
+                          ],
+                          "size": [
+                            72,
+                            28
+                          ]
+                        },
+                        "text": {
+                          "value": "x0",
+                          "fontSize": 18,
+                          "fontAsset": "font.default",
+                          "color": "#BFC9D7FF"
+                        }
+                      },
+                      {
+                        "type": "Button",
+                        "id": "SelectButton",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            0
+                          ],
+                          "anchorMax": [
+                            1,
+                            1
+                          ],
+                          "position": [
+                            0,
+                            0
+                          ],
+                          "size": [
+                            0,
+                            0
+                          ]
+                        },
+                        "image": {
+                          "color": "#FFFFFF00"
+                        },
+                        "button": {
+                          "interactable": true
+                        }
+                      }
+                    ]
+                  },
+                  "itemBindings": [
+                    {
+                      "controlId": "ItemIcon",
+                      "itemField": "icon",
+                      "property": "sprite"
+                    },
+                    {
+                      "controlId": "ItemNameText",
+                      "itemField": "name",
+                      "property": "text"
+                    },
+                    {
+                      "controlId": "ItemCountText",
+                      "itemField": "count",
+                      "property": "text"
+                    }
+                  ],
+                  "itemEvents": [
+                    {
+                      "controlId": "SelectButton",
+                      "event": "onItemClick",
+                      "handler": "OnInventoryItemClicked",
+                      "itemIdField": "id"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "Panel",
+                "id": "DetailPanel",
+                "rect": {
+                  "anchorMin": [
+                    1,
+                    0
+                  ],
+                  "anchorMax": [
+                    1,
+                    1
+                  ],
+                  "position": [
+                    -220,
+                    0
+                  ],
+                  "size": [
+                    440,
+                    0
+                  ]
+                },
+                "image": {
+                  "color": "#FFFFFF0F"
+                },
+                "children": [
+                  {
+                    "type": "RawImage",
+                    "id": "PreviewImage",
+                    "rect": {
+                      "anchorMin": [
+                        0.5,
+                        1
+                      ],
+                      "anchorMax": [
+                        0.5,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        -92
+                      ],
+                      "size": [
+                        360,
+                        128
+                      ]
+                    },
+                    "rawImage": {
+                      "texture": "texture.inventory.preview",
+                      "color": "#FFFFFFFF"
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "id": "SelectedNameText",
+                    "rect": {
+                      "anchorMin": [
+                        0,
+                        1
+                      ],
+                      "anchorMax": [
+                        1,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        -178
+                      ],
+                      "size": [
+                        -42,
+                        40
+                      ]
+                    },
+                    "text": {
+                      "fontSize": 26,
+                      "fontAsset": "font.default",
+                      "color": "#FFFFFFFF",
+                      "value": ""
+                    }
+                  },
+                  {
+                    "type": "Text",
+                    "id": "SelectedDescText",
+                    "rect": {
+                      "anchorMin": [
+                        0,
+                        1
+                      ],
+                      "anchorMax": [
+                        1,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        -240
+                      ],
+                      "size": [
+                        -42,
+                        84
+                      ]
+                    },
+                    "text": {
+                      "fontSize": 20,
+                      "fontAsset": "font.default",
+                      "color": "#D7DEE8FF",
+                      "value": ""
+                    }
+                  },
+                  {
+                    "type": "ScrollView",
+                    "id": "NotesScrollView",
+                    "rect": {
+                      "anchorMin": [
+                        0.5,
+                        0
+                      ],
+                      "anchorMax": [
+                        0.5,
+                        0
+                      ],
+                      "position": [
+                        0,
+                        112
+                      ],
+                      "size": [
+                        380,
+                        58
+                      ]
+                    },
+                    "scrollView": {
+                      "vertical": true,
+                      "horizontal": false
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": "NotesText",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            1
+                          ],
+                          "anchorMax": [
+                            1,
+                            1
+                          ],
+                          "position": [
+                            0,
+                            -31
+                          ],
+                          "size": [
+                            -28,
+                            62
+                          ]
+                        },
+                        "text": {
+                          "locKey": "notes.body",
+                          "fontSize": 18,
+                          "fontAsset": "font.default",
+                          "color": "#BFC9D7FF"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "Button",
+                    "id": "UseButton",
+                    "rect": {
+                      "anchorMin": [
+                        0.5,
+                        0
+                      ],
+                      "anchorMax": [
+                        0.5,
+                        0
+                      ],
+                      "position": [
+                        0,
+                        38
+                      ],
+                      "size": [
+                        190,
+                        44
+                      ]
+                    },
+                    "image": {
+                      "color": "#2F80EDFF"
+                    },
+                    "button": {
+                      "interactable": false
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": "UseLabel",
+                        "rect": {
+                          "anchorMin": [
+                            0,
+                            0
+                          ],
+                          "anchorMax": [
+                            1,
+                            1
+                          ],
+                          "position": [
+                            0,
+                            0
+                          ],
+                          "size": [
+                            0,
+                            0
+                          ]
+                        },
+                        "text": {
+                          "locKey": "button.use",
+                          "fontSize": 22,
+                          "fontAsset": "font.default",
+                          "color": "#FFFFFFFF"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Panel",
+            "id": "Footer",
+            "rect": {
+              "anchorMin": [
+                0,
+                0
+              ],
+              "anchorMax": [
+                1,
+                0
+              ],
+              "position": [
+                0,
+                38
+              ],
+              "size": [
+                -48,
+                64
+              ]
+            },
+            "image": {
+              "color": "#FFFFFF08"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "id": "StatusText",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    1,
+                    1
+                  ],
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "size": [
+                    -360,
+                    0
+                  ]
+                },
+                "text": {
+                  "fontSize": 20,
+                  "fontAsset": "font.default",
+                  "color": "#C8D2E0FF",
+                  "value": ""
+                }
+              },
+              {
+                "type": "Scrollbar",
+                "id": "WeightScrollbar",
+                "rect": {
+                  "anchorMin": [
+                    1,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    1,
+                    0.5
+                  ],
+                  "position": [
+                    -210,
+                    0
+                  ],
+                  "size": [
+                    200,
+                    24
+                  ]
+                },
+                "scrollbar": {
+                  "direction": "LeftToRight",
+                  "value": 0.42,
+                  "size": 0.2
+                }
+              },
+              {
+                "type": "Button",
+                "id": "RefreshButton",
+                "rect": {
+                  "anchorMin": [
+                    1,
+                    0.5
+                  ],
+                  "anchorMax": [
+                    1,
+                    0.5
+                  ],
+                  "position": [
+                    -56,
+                    0
+                  ],
+                  "size": [
+                    96,
+                    40
+                  ]
+                },
+                "image": {
+                  "color": "#3A516BFF"
+                },
+                "button": {
+                  "interactable": true
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "id": "RefreshLabel",
+                    "rect": {
+                      "anchorMin": [
+                        0,
+                        0
+                      ],
+                      "anchorMax": [
+                        1,
+                        1
+                      ],
+                      "position": [
+                        0,
+                        0
+                      ],
+                      "size": [
+                        0,
+                        0
+                      ]
+                    },
+                    "text": {
+                      "locKey": "button.refresh",
+                      "fontSize": 19,
+                      "fontAsset": "font.default",
+                      "color": "#FFFFFFFF"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Panel",
+            "id": "AssetReferences",
+            "rect": {
+              "anchorMin": [
+                0,
+                0
+              ],
+              "anchorMax": [
+                0,
+                0
+              ],
+              "position": [
+                -10000,
+                -10000
+              ],
+              "size": [
+                4,
+                4
+              ]
+            },
+            "children": [
+              {
+                "type": "Image",
+                "id": "SwordIconAsset",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    0,
+                    0
+                  ],
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "size": [
+                    1,
+                    1
+                  ]
+                },
+                "image": {
+                  "color": "#FFFFFFFF",
+                  "sprite": "image.inventory.item_sword"
+                }
+              },
+              {
+                "type": "Image",
+                "id": "ShieldIconAsset",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    0,
+                    0
+                  ],
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "size": [
+                    1,
+                    1
+                  ]
+                },
+                "image": {
+                  "color": "#FFFFFFFF",
+                  "sprite": "image.inventory.item_shield"
+                }
+              },
+              {
+                "type": "Image",
+                "id": "PotionIconAsset",
+                "rect": {
+                  "anchorMin": [
+                    0,
+                    0
+                  ],
+                  "anchorMax": [
+                    0,
+                    0
+                  ],
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "size": [
+                    1,
+                    1
+                  ]
+                },
+                "image": {
+                  "color": "#FFFFFFFF",
+                  "sprite": "image.inventory.item_potion"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

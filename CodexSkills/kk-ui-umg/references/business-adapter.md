@@ -8,8 +8,8 @@ Use this reference when connecting an existing gameplay/business class to a KK_U
 2. Read the existing business class named by the user, such as `PlayerController`.
 3. Define a UI-facing `I<Feature>Service` contract with only the data, commands, and changed events needed by this UI.
 4. Create one adapter MonoBehaviour in the business directory, for example `Assets/Scripts/Game/Player/UIAdapters/PlayerHudServiceAdapter.cs`.
-5. The adapter references the business object, registers the service with `UIManager.RegisterService<I<Feature>Service>()`, and unregisters on destroy.
-6. Put or update the handwritten Controller partial at `Assets/UI/<PackageId>/<PackageId>Controller.cs`.
+5. The adapter references the business object, registers the service with `UIManager.RegisterService<I<Feature>Service>()` in `Start`, and unregisters on destroy.
+6. Put or update the handwritten Controller partial at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`.
 7. Update `codegen.requiredServices`. The Controller maps service snapshots into Store fields and flushes once per UI event or business notification.
 
 ## Controller Partial Location
@@ -17,24 +17,24 @@ Use this reference when connecting an existing gameplay/business class to a KK_U
 Handwritten Controller partials are UI-layer code, not business adapter code. Use:
 
 ```text
-Assets/UI/<PackageId>/<PackageId>Controller.cs
+<Generated Parent>/<PackageId>/<PackageId>Controller.cs
 ```
 
 Example:
 
 ```text
-Assets/UI/PlayerHud/PlayerHudController.cs
+Assets/UI/Generated/PlayerHud/PlayerHudController.cs
 ```
 
 Do not create extra UI subfolders such as:
 
 ```text
-Assets/UI/<PackageId>/Controllers/
-Assets/UI/<PackageId>/Business/
-Assets/UI/<PackageId>/Partial/
+<Generated Parent>/<PackageId>/Controllers/
+<Generated Parent>/<PackageId>/Business/
+<Generated Parent>/<PackageId>/Partial/
 ```
 
-Do not put handwritten partials under `Assets/UI/Generated/`; Generated is rebuildable and may be deleted.
+Do not put handwritten partials inside `<Generated Parent>/<PackageId>/Scripts/`. `Scripts/` is generator-owned and may be overwritten. The root `<Generated Parent>/<PackageId>/` folder is the stable UI package folder for the handwritten partial.
 
 ## Business API Rules
 
@@ -56,23 +56,40 @@ public interface IPlayerHudService
 
 public sealed class PlayerHudServiceAdapter : MonoBehaviour, IPlayerHudService
 {
-    [SerializeField] private UIManager _uiManager;
     [SerializeField] private PlayerController _playerController;
+
+    private UIManager _registeredManager;
 
     public event Action StatsChanged;
 
-    private void Awake()
+    private void Start()
     {
         _playerController.HealthChanged += HandleStatsChanged;
         _playerController.ManaChanged += HandleStatsChanged;
-        _uiManager.RegisterService<IPlayerHudService>(this);
+
+        _registeredManager = UIManager.Instance;
+        if (_registeredManager == null)
+        {
+            Debug.LogError("PlayerHudServiceAdapter requires a UIManager in the scene.");
+            return;
+        }
+
+        _registeredManager.RegisterService<IPlayerHudService>(this);
     }
 
     private void OnDestroy()
     {
-        _playerController.HealthChanged -= HandleStatsChanged;
-        _playerController.ManaChanged -= HandleStatsChanged;
-        _uiManager.UnregisterService<IPlayerHudService>();
+        if (_playerController != null)
+        {
+            _playerController.HealthChanged -= HandleStatsChanged;
+            _playerController.ManaChanged -= HandleStatsChanged;
+        }
+
+        if (_registeredManager != null)
+        {
+            _registeredManager.UnregisterService<IPlayerHudService>();
+            _registeredManager = null;
+        }
     }
 
     public PlayerHudSnapshot GetSnapshot()

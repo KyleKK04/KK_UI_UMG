@@ -2,10 +2,19 @@
 
 These paths refer to examples in the current development project when they exist. They are authoring references, not files guaranteed to exist after installing the UPM package into a clean Unity project.
 
-For package release checks, do not treat project-level `Assets/UI/Source/...` examples as part of `Packages/com.kk.ui-umg`. Future importable examples should live under `Samples~`.
+For package release checks, do not treat project-level `Assets/UI/Source/...` examples as part of `Packages/com.kk.ui-umg`. Package-owned examples live under `Sample/`.
+
+The package now ships a visible sample:
+
+```text
+Sample/InventoryPanelSample
+```
+
+Run `KK_UI_UMG/Sample/Open Inventory Panel Sample` to register the package prefab Addressables key and open the runnable package scene.
 
 | Example | When to Read |
 |---|---|
+| `Sample/InventoryPanelSample` | Package-contained end-to-end sample with Source JSON, Generated quick-start output, Controller partial, UIManager bootstrap, and `IInventoryService` |
 | `Assets/UI/Source/SimpleMessageBox/` | Minimal dialog, static assets, basic Button / Text / Image |
 | `Assets/UI/Source/ConfirmDialog/` | Dialog naming, two-button layout, no business event binding pattern |
 | `Assets/UI/Source/InventoryPanel/` | Full component sample, `VerticalList`, Store fields, complex event contract |
@@ -93,7 +102,7 @@ Expected authoring result:
 - Do not add `InventoryItemModel` or other business model types to `bindings.json`.
 - Keep list display data as `IReadOnlyList<MessagePayload>`.
 - Add `codegen.requiredServices` with `type: Game.Inventory.IInventoryService` and `property: InventoryService`.
-- Put handwritten Controller partial code at `Assets/UI/InventoryPanel/InventoryPanelController.cs` and map service item models into Store fields there.
+- Put handwritten Controller partial code at `Assets/UI/Generated/InventoryPanel/InventoryPanelController.cs` and map service item models into Store fields there.
 - Do not make View, Binder, UIListView, or MessageBus access `IInventoryService`.
 
 Existing business adapter:
@@ -108,4 +117,4 @@ Expected authoring result:
 - Create `IPlayerHudService` and `PlayerHudServiceAdapter` in the player business directory.
 - Add only the minimum public getters/events to PlayerController if they are missing.
 - Add `codegen.requiredServices` for `IPlayerHudService`.
-- Put or update `Assets/UI/PlayerHud/PlayerHudController.cs` to subscribe to service changes, map snapshots to Store fields, and flush once.
+- Put or update `Assets/UI/Generated/PlayerHud/PlayerHudController.cs` to subscribe to service changes, map snapshots to Store fields, and flush once.

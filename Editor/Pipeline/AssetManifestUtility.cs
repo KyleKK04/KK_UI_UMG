@@ -78,6 +78,17 @@ namespace KK.UI.UMG.Editor.Pipeline
                 return null;
             }
 
+            if (context != null && context.HasGeneratedParentOverride)
+            {
+                var source = NormalizeAssetPath(asset.Source);
+                var sourceAssetsRoot = SourceAssetsRoot(context);
+                if (IsUnderAssetPath(source, sourceAssetsRoot) && !string.Equals(source, sourceAssetsRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    var relative = source.Substring(sourceAssetsRoot.Length).TrimStart('/');
+                    return ToAssetPath(Path.Combine(context.GeneratedRoot, "Assets", relative));
+                }
+            }
+
             var target = NormalizeAssetPath(asset.Target);
             if (target.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
             {

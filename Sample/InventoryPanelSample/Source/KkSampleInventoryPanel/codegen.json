@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0",
+  "namespace": "KK.UI.UMG.Samples.Inventory",
+  "outputRoot": "../../Generated/KkSampleInventoryPanel",
+  "addressablesKey": "UI/KkSampleInventoryPanel/KkSampleInventoryPanelView",
+  "view": {
+    "className": "KkSampleInventoryPanelView",
+    "baseClass": "UIViewBase"
+  },
+  "controller": {
+    "className": "KkSampleInventoryPanelController",
+    "baseClass": "UIControllerBase"
+  },
+  "viewModel": {
+    "className": "KkSampleInventoryPanelViewModel"
+  },
+  "requiredServices": [
+    {
+      "type": "KK.UI.UMG.Samples.Inventory.IInventoryService",
+      "property": "InventoryService"
+    }
+  ],
+  "bus": {
+    "routes": [
+      {
+        "channel": "in.open_requested",
+        "action": "Open"
+      },
+      {
+        "channel": "in.close_requested",
+        "action": "Close"
+      }
+    ]
+  }
+}

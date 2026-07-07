@@ -6,8 +6,7 @@
     "kk.ui-umg.Editor",
     "Unity.TextMeshPro",
     "UnityEngine.UI",
-    "Unity.Addressables.Editor",
-    "Unity.Newtonsoft.Json"
+    "Unity.Addressables.Editor"
   ],
   "includePlatforms": [
     "Editor"

@@ -9,16 +9,23 @@ namespace KK.UI.UMG.Editor.Windows
 {
     public sealed class KKUIPipelineWindow : EditorWindow
     {
+        private const string GeneratedParentPrefsKey = "KK_UI_UMG.KKPipeline.GeneratedParent";
+        private const string DefaultGeneratedParentPath = "Assets/UI/Generated";
+
         private string _packageManifestPath = string.Empty;
         private TextAsset _packageManifestAsset;
+        private string _generatedParentPath = DefaultGeneratedParentPath;
+        private DefaultAsset _generatedParentAsset;
         private Vector2 _scroll;
         private KKUIPipelineResult _lastResult;
         private string _selectionError;
+        private string _generatedParentError;
         private Texture2D _previewTexture;
         private PrefabPreviewStatus _previewStatus = PrefabPreviewStatus.NoPreview;
         private string _previewError;
         private string _previewPrefabPath;
         private string _previewPackagePath;
+        private string _previewGeneratedParentPath;
 
         [MenuItem("KK_UI_UMG/KKPipeline", priority = 0)]
         public static void Open()
@@ -29,6 +36,7 @@ namespace KK.UI.UMG.Editor.Windows
         private void OnEnable()
         {
             titleContent = new GUIContent("KKPipeline");
+            LoadGeneratedParentPath();
             SelectInitialManifestPath();
         }
 
@@ -36,14 +44,21 @@ namespace KK.UI.UMG.Editor.Windows
         {
             EditorGUILayout.LabelField("Package Manifest", EditorStyles.boldLabel);
             DrawManifestSelector();
+            EditorGUILayout.Space(6f);
+            DrawGeneratedParentSelector();
 
             if (!string.IsNullOrWhiteSpace(_selectionError))
             {
                 EditorGUILayout.HelpBox(_selectionError, MessageType.Warning);
             }
 
+            if (!string.IsNullOrWhiteSpace(_generatedParentError))
+            {
+                EditorGUILayout.HelpBox(_generatedParentError, MessageType.Warning);
+            }
+
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!IsManifestPathRunnable()))
+            using (new EditorGUI.DisabledScope(!IsRunnable()))
             {
                 if (GUILayout.Button("Validate"))
                 {
@@ -51,7 +66,7 @@ namespace KK.UI.UMG.Editor.Windows
                     {
                         return;
                     }
-                    _lastResult = new KKUIPipeline().ValidateOnly(_packageManifestPath);
+                    _lastResult = new KKUIPipeline().ValidateOnly(_packageManifestPath, GetGeneratedParentPath());
                     MarkPreviewStale();
                 }
 
@@ -61,7 +76,7 @@ namespace KK.UI.UMG.Editor.Windows
                     {
                         return;
                     }
-                    _lastResult = new KKUIPipeline().Run(_packageManifestPath);
+                    _lastResult = new KKUIPipeline().Run(_packageManifestPath, GetGeneratedParentPath());
                     MarkPreviewStale();
                 }
 
@@ -71,7 +86,7 @@ namespace KK.UI.UMG.Editor.Windows
                     {
                         return;
                     }
-                    _lastResult = new KKUIPipeline().VerifyOnly(_packageManifestPath);
+                    _lastResult = new KKUIPipeline().VerifyOnly(_packageManifestPath, GetGeneratedParentPath());
                     if (_lastResult.Success)
                     {
                         RenderPreview();
@@ -156,6 +171,46 @@ namespace KK.UI.UMG.Editor.Windows
             EditorGUILayout.EndHorizontal();
         }
 
+        private void DrawGeneratedParentSelector()
+        {
+            EditorGUILayout.LabelField("Generated Parent Folder", EditorStyles.boldLabel);
+
+            EditorGUI.BeginChangeCheck();
+            var selectedFolder = (DefaultAsset)EditorGUILayout.ObjectField("Folder", _generatedParentAsset, typeof(DefaultAsset), false);
+            if (EditorGUI.EndChangeCheck())
+            {
+                SetGeneratedParentAsset(selectedFolder);
+            }
+
+            EditorGUI.BeginChangeCheck();
+            var typedPath = EditorGUILayout.TextField("Path", _generatedParentPath);
+            if (EditorGUI.EndChangeCheck())
+            {
+                SetGeneratedParentPath(typedPath);
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Browse"))
+            {
+                BrowseGeneratedParent();
+            }
+
+            using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_generatedParentPath) || !Directory.Exists(_generatedParentPath)))
+            {
+                if (GUILayout.Button("Ping"))
+                {
+                    PingGeneratedParent();
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+
+            var normalized = GetGeneratedParentPath();
+            if (!string.IsNullOrWhiteSpace(normalized) && string.IsNullOrWhiteSpace(_generatedParentError))
+            {
+                EditorGUILayout.LabelField("Output", $"{normalized}/<PackageId>");
+            }
+        }
+
         private void SetManifestAsset(TextAsset asset)
         {
             _packageManifestAsset = asset;
@@ -175,6 +230,40 @@ namespace KK.UI.UMG.Editor.Windows
                 ? null
                 : AssetDatabase.LoadAssetAtPath<TextAsset>(_packageManifestPath);
             _selectionError = ValidateManifestPath(_packageManifestPath);
+            MarkPreviewStale();
+        }
+
+        private void SetGeneratedParentAsset(DefaultAsset asset)
+        {
+            if (asset == null)
+            {
+                SetGeneratedParentPath(DefaultGeneratedParentPath);
+                return;
+            }
+
+            var assetPath = AssetDatabase.GetAssetPath(asset);
+            if (!AssetDatabase.IsValidFolder(assetPath))
+            {
+                _generatedParentError = "Generated Parent must be a folder.";
+                return;
+            }
+
+            SetGeneratedParentPath(assetPath);
+        }
+
+        private void SetGeneratedParentPath(string path)
+        {
+            _generatedParentPath = NormalizeAssetPath(path);
+            if (string.IsNullOrWhiteSpace(_generatedParentPath))
+            {
+                _generatedParentPath = DefaultGeneratedParentPath;
+            }
+
+            _generatedParentAsset = Directory.Exists(_generatedParentPath)
+                ? AssetDatabase.LoadAssetAtPath<DefaultAsset>(_generatedParentPath)
+                : null;
+            _generatedParentError = ValidateGeneratedParentPath(_generatedParentPath);
+            EditorPrefs.SetString(GeneratedParentPrefsKey, _generatedParentPath);
             MarkPreviewStale();
         }
 
@@ -198,12 +287,47 @@ namespace KK.UI.UMG.Editor.Windows
             SetManifestPath(selected.Substring(projectRoot.Length + 1));
         }
 
+        private void BrowseGeneratedParent()
+        {
+            var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+            var currentFullPath = string.IsNullOrWhiteSpace(_generatedParentPath)
+                ? Application.dataPath
+                : Path.GetFullPath(_generatedParentPath);
+            var startDirectory = Directory.Exists(currentFullPath) ? currentFullPath : Application.dataPath;
+            var selected = EditorUtility.OpenFolderPanel("Select Generated Parent Folder", startDirectory, string.Empty);
+            if (string.IsNullOrWhiteSpace(selected))
+            {
+                return;
+            }
+
+            if (projectRoot == null || !selected.StartsWith(projectRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                _generatedParentError = "Generated Parent must be inside this Unity project.";
+                return;
+            }
+
+            SetGeneratedParentPath(selected.Substring(projectRoot.Length + 1));
+        }
+
         private void PingManifest()
         {
             var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(_packageManifestPath);
             if (asset == null)
             {
                 _selectionError = $"Package manifest does not exist: {_packageManifestPath}";
+                return;
+            }
+
+            EditorGUIUtility.PingObject(asset);
+            Selection.activeObject = asset;
+        }
+
+        private void PingGeneratedParent()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<DefaultAsset>(_generatedParentPath);
+            if (asset == null)
+            {
+                _generatedParentError = $"Generated Parent folder does not exist yet: {_generatedParentPath}";
                 return;
             }
 
@@ -239,7 +363,7 @@ namespace KK.UI.UMG.Editor.Windows
 
             try
             {
-                var context = KKUIPipelineContext.Load(_packageManifestPath);
+                var context = KKUIPipelineContext.Load(_packageManifestPath, GetGeneratedParentPath());
                 return Path.Combine(context.GeneratedRoot, "Reports", "generate-report.json");
             }
             catch (Exception ex)
@@ -252,12 +376,14 @@ namespace KK.UI.UMG.Editor.Windows
         private bool ValidateBeforeRun()
         {
             _selectionError = ValidateManifestPath(_packageManifestPath);
-            return string.IsNullOrWhiteSpace(_selectionError);
+            _generatedParentError = ValidateGeneratedParentPath(_generatedParentPath);
+            return string.IsNullOrWhiteSpace(_selectionError) && string.IsNullOrWhiteSpace(_generatedParentError);
         }
 
-        private bool IsManifestPathRunnable()
+        private bool IsRunnable()
         {
-            return string.IsNullOrWhiteSpace(ValidateManifestPath(_packageManifestPath));
+            return string.IsNullOrWhiteSpace(ValidateManifestPath(_packageManifestPath)) &&
+                string.IsNullOrWhiteSpace(ValidateGeneratedParentPath(_generatedParentPath));
         }
 
         private static string ValidateManifestPath(string path)
@@ -289,6 +415,44 @@ namespace KK.UI.UMG.Editor.Windows
         private static string NormalizeAssetPath(string path)
         {
             return (path ?? string.Empty).Replace('\\', '/').Trim();
+        }
+
+        private static string ValidateGeneratedParentPath(string path)
+        {
+            var normalized = NormalizeAssetPath(path).TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return "Select a Generated Parent folder.";
+            }
+
+            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal) &&
+                !normalized.StartsWith("Packages/", StringComparison.Ordinal))
+            {
+                return "Generated Parent must be under Assets/ or Packages/.";
+            }
+
+            if (normalized.StartsWith("Assets/UI/Source", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Generated Parent must not be inside Assets/UI/Source.";
+            }
+
+            if (File.Exists(normalized) && !Directory.Exists(normalized))
+            {
+                return "Generated Parent must be a folder path.";
+            }
+
+            return null;
+        }
+
+        private string GetGeneratedParentPath()
+        {
+            var normalized = NormalizeAssetPath(_generatedParentPath).TrimEnd('/');
+            return string.IsNullOrWhiteSpace(normalized) ? DefaultGeneratedParentPath : normalized;
+        }
+
+        private void LoadGeneratedParentPath()
+        {
+            SetGeneratedParentPath(EditorPrefs.GetString(GeneratedParentPrefsKey, DefaultGeneratedParentPath));
         }
 
         private void SelectInitialManifestPath()
@@ -325,7 +489,7 @@ namespace KK.UI.UMG.Editor.Windows
 
         private void RenderPreview()
         {
-            var result = new PrefabPreviewRenderer().Render(_packageManifestPath);
+            var result = new PrefabPreviewRenderer().Render(_packageManifestPath, GetGeneratedParentPath());
             if (result.Success)
             {
                 ReplacePreviewTexture(result.Texture);
@@ -333,6 +497,7 @@ namespace KK.UI.UMG.Editor.Windows
                 _previewError = null;
                 _previewPrefabPath = result.PrefabPath;
                 _previewPackagePath = _packageManifestPath;
+                _previewGeneratedParentPath = GetGeneratedParentPath();
                 WritePreviewLedger(true, "-");
                 Repaint();
                 return;
@@ -351,7 +516,7 @@ namespace KK.UI.UMG.Editor.Windows
         {
             try
             {
-                var context = KKUIPipelineContext.Load(_packageManifestPath);
+                var context = KKUIPipelineContext.Load(_packageManifestPath, GetGeneratedParentPath());
                 new ValidationLedgerWriter().WritePreviewResult(context, success, note);
                 AssetDatabase.Refresh();
             }
@@ -372,7 +537,8 @@ namespace KK.UI.UMG.Editor.Windows
                 return;
             }
 
-            if (!string.Equals(_previewPackagePath, _packageManifestPath, StringComparison.Ordinal))
+            if (!string.Equals(_previewPackagePath, _packageManifestPath, StringComparison.Ordinal) ||
+                !string.Equals(_previewGeneratedParentPath, GetGeneratedParentPath(), StringComparison.Ordinal))
             {
                 _previewPrefabPath = null;
             }
@@ -420,7 +586,7 @@ namespace KK.UI.UMG.Editor.Windows
 
         private string GetPreviewStatusLabel()
         {
-            if (!IsManifestPathRunnable())
+            if (!IsRunnable())
             {
                 return "No Package";
             }

@@ -21,11 +21,11 @@ namespace KK.UI.UMG.Editor.Pipeline
             new LocKeyValidator()
         };
 
-        public KKUIPipelineResult Run(string packageManifestPath)
+        public KKUIPipelineResult Run(string packageManifestPath, string generatedParentPath = null)
         {
             try
             {
-                var context = KKUIPipelineContext.Load(packageManifestPath);
+                var context = KKUIPipelineContext.Load(packageManifestPath, generatedParentPath);
                 new ValidationLedgerWriter().EnsureScaffold(context);
                 Validate(context);
                 if (context.Issues.Any(issue => issue.Severity == KKUIPipelineIssueSeverity.Error))
@@ -51,7 +51,7 @@ namespace KK.UI.UMG.Editor.Pipeline
                     {
                         if (!PendingPrefabGenerationScheduler.IsRunningContinuation)
                         {
-                            PendingPrefabGenerationScheduler.Schedule(packageManifestPath);
+                            PendingPrefabGenerationScheduler.Schedule(packageManifestPath, generatedParentPath);
                         }
 
                         context.Add(KKUIPipelineIssueSeverity.Info, "GENPENDING", $"{ex.Message} Unity is compiling generated scripts; prefab generation will continue automatically after compilation finishes.");
@@ -83,11 +83,11 @@ namespace KK.UI.UMG.Editor.Pipeline
             }
         }
 
-        public KKUIPipelineResult ValidateOnly(string packageManifestPath)
+        public KKUIPipelineResult ValidateOnly(string packageManifestPath, string generatedParentPath = null)
         {
             try
             {
-                var context = KKUIPipelineContext.Load(packageManifestPath);
+                var context = KKUIPipelineContext.Load(packageManifestPath, generatedParentPath);
                 new ValidationLedgerWriter().EnsureScaffold(context);
                 Validate(context);
                 var result = KKUIPipelineResult.FromContext("Validate", context, Array.Empty<string>());
@@ -101,11 +101,11 @@ namespace KK.UI.UMG.Editor.Pipeline
             }
         }
 
-        public KKUIPipelineResult VerifyOnly(string packageManifestPath)
+        public KKUIPipelineResult VerifyOnly(string packageManifestPath, string generatedParentPath = null)
         {
             try
             {
-                var context = KKUIPipelineContext.Load(packageManifestPath);
+                var context = KKUIPipelineContext.Load(packageManifestPath, generatedParentPath);
                 new ValidationLedgerWriter().EnsureScaffold(context);
                 Validate(context);
                 var verified = context.Issues.Any(issue => issue.Severity == KKUIPipelineIssueSeverity.Error)

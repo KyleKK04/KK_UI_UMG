@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.0.1
+
+- Added package-contained `Inventory Panel Sample` under `Sample/InventoryPanelSample`.
+- Added `KK_UI_UMG/Sample/Open Inventory Panel Sample` to register the package prefab Addressables key and open the package sample scene.
+- Added Editor-selectable `Generated Parent Folder` so Generate / Verify / Preview write each UI under `<Generated Parent>/<PackageId>`.
+- Updated business Controller partial convention to `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`; generated-owned files remain under `Scripts/`, `Prefabs/`, `Reports/`, and `Assets/`.
+- Updated package and skill documentation to describe the sample workflow.
+- Fixed package sample Source asset validation by allowing existing `Packages/` asset paths while preserving Source/Assets and shared asset root boundaries.
+- Clarified README wording around Unity Newtonsoft Json as an internal Editor pipeline dependency.
+- Updated Skill service adapter examples to register in `Start()` and unregister in `OnDestroy()`.
+
 ## 1.0.0
 
 - Added v0.9.3 Text / Localization authoring rules: static UI copy uses `locKey` plus `strings.json`, while runtime-changing text uses bindings, Store, and Binder.

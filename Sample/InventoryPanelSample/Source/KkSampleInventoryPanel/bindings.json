@@ -1,0 +1,155 @@
+{
+  "mvvm": {
+    "fields": [
+      {
+        "id": "SelectedName",
+        "type": "string",
+        "default": "No item selected"
+      },
+      {
+        "id": "SelectedDescription",
+        "type": "string",
+        "default": "Select an item to inspect details."
+      },
+      {
+        "id": "Status",
+        "type": "string",
+        "default": "Ready"
+      },
+      {
+        "id": "SearchText",
+        "type": "string",
+        "default": ""
+      },
+      {
+        "id": "CategoryIndex",
+        "type": "int",
+        "default": 0
+      },
+      {
+        "id": "EquippedOnly",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "id": "MinQuality",
+        "type": "float",
+        "default": 0
+      },
+      {
+        "id": "WeightRatio",
+        "type": "float",
+        "default": 0.42
+      },
+      {
+        "id": "UseButtonEnabled",
+        "type": "bool",
+        "default": false
+      },
+      {
+        "id": "InventoryItems",
+        "type": "IReadOnlyList<MessagePayload>",
+        "default": null
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "controlId": "SelectedNameText",
+      "fieldId": "SelectedName",
+      "mode": "OneWay",
+      "property": "text"
+    },
+    {
+      "controlId": "SelectedDescText",
+      "fieldId": "SelectedDescription",
+      "mode": "OneWay",
+      "property": "text"
+    },
+    {
+      "controlId": "StatusText",
+      "fieldId": "Status",
+      "mode": "OneWay",
+      "property": "text"
+    },
+    {
+      "controlId": "SearchInput",
+      "fieldId": "SearchText",
+      "mode": "OneWay",
+      "property": "text"
+    },
+    {
+      "controlId": "CategoryDropdown",
+      "fieldId": "CategoryIndex",
+      "mode": "OneWay",
+      "property": "value"
+    },
+    {
+      "controlId": "EquippedOnlyToggle",
+      "fieldId": "EquippedOnly",
+      "mode": "OneWay",
+      "property": "isOn"
+    },
+    {
+      "controlId": "QualitySlider",
+      "fieldId": "MinQuality",
+      "mode": "OneWay",
+      "property": "value"
+    },
+    {
+      "controlId": "WeightScrollbar",
+      "fieldId": "WeightRatio",
+      "mode": "OneWay",
+      "property": "value"
+    },
+    {
+      "controlId": "UseButton",
+      "fieldId": "UseButtonEnabled",
+      "mode": "OneWay",
+      "property": "interactable"
+    },
+    {
+      "controlId": "InventoryList",
+      "fieldId": "InventoryItems",
+      "mode": "OneWay",
+      "property": "items"
+    }
+  ],
+  "events": [
+    {
+      "controlId": "CloseButton",
+      "event": "onClick",
+      "handler": "OnCloseRequested"
+    },
+    {
+      "controlId": "RefreshButton",
+      "event": "onClick",
+      "handler": "OnRefreshRequested"
+    },
+    {
+      "controlId": "UseButton",
+      "event": "onClick",
+      "handler": "OnUseSelectedRequested"
+    },
+    {
+      "controlId": "SearchInput",
+      "event": "onEndEdit",
+      "handler": "OnSearchSubmitted"
+    },
+    {
+      "controlId": "EquippedOnlyToggle",
+      "event": "onValueChanged",
+      "handler": "OnEquippedOnlyChanged"
+    },
+    {
+      "controlId": "QualitySlider",
+      "event": "onValueChanged",
+      "handler": "OnQualityChanged"
+    },
+    {
+      "controlId": "CategoryDropdown",
+      "event": "onValueChanged",
+      "handler": "OnCategoryChanged"
+    }
+  ]
+}

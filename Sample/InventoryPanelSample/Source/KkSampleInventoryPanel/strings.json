@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "defaultCulture": "zh-Hans",
+  "cultures": [
+    "zh-Hans",
+    "en-US"
+  ],
+  "strings": {
+    "inventory.title": {
+      "zh-Hans": "Inventory",
+      "en-US": "Inventory"
+    },
+    "button.close": {
+      "zh-Hans": "Close",
+      "en-US": "Close"
+    },
+    "filter.search": {
+      "zh-Hans": "Search",
+      "en-US": "Search"
+    },
+    "filter.search_placeholder": {
+      "zh-Hans": "Item name",
+      "en-US": "Item name"
+    },
+    "filter.category": {
+      "zh-Hans": "Category",
+      "en-US": "Category"
+    },
+    "category.all": {
+      "zh-Hans": "All",
+      "en-US": "All"
+    },
+    "category.weapon": {
+      "zh-Hans": "Weapon",
+      "en-US": "Weapon"
+    },
+    "category.armor": {
+      "zh-Hans": "Armor",
+      "en-US": "Armor"
+    },
+    "category.consumable": {
+      "zh-Hans": "Consumable",
+      "en-US": "Consumable"
+    },
+    "filter.equipped_only": {
+      "zh-Hans": "Equipped",
+      "en-US": "Equipped"
+    },
+    "filter.quality": {
+      "zh-Hans": "Quality",
+      "en-US": "Quality"
+    },
+    "button.use": {
+      "zh-Hans": "Use",
+      "en-US": "Use"
+    },
+    "notes.body": {
+      "zh-Hans": "Filter the list, select an item, then use Store-driven bindings to update this panel.",
+      "en-US": "Filter the list, select an item, then use Store-driven bindings to update this panel."
+    },
+    "button.refresh": {
+      "zh-Hans": "Refresh",
+      "en-US": "Refresh"
+    }
+  }
+}

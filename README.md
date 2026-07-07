@@ -40,16 +40,15 @@ KK_UI_UMG 适合这些 Unity 项目：
 - Addressables。
 - UGUI。
 - TextMeshPro。
-- Newtonsoft Json。
 
-Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addressables、UGUI 和 Newtonsoft Json 依赖。TextMeshPro 字体资产需要项目侧准备。
+Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addressables、UGUI 以及 Editor pipeline 内部使用的 Unity Newtonsoft Json 依赖。用户业务 Runtime 代码不需要直接使用 Newtonsoft Json；TextMeshPro 字体资产需要项目侧准备。
 
 ### 方式一：从 GitHub 安装
 
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.0"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.1"
   }
 }
 ```
@@ -59,7 +58,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 正式 Release 后，可以从 GitHub Release 下载：
 
 ```text
-com.kk.ui-umg-1.0.0.tgz
+com.kk.ui-umg-1.0.1.tgz
 ```
 
 然后在 Unity Package Manager 中选择：
@@ -67,7 +66,7 @@ com.kk.ui-umg-1.0.0.tgz
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.0.tgz
+  -> com.kk.ui-umg-1.0.1.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -75,7 +74,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.0.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.1.tgz"
   }
 }
 ```
@@ -126,7 +125,19 @@ Package Manager
    Assets/UI/Source/<PackageId>/package.json
    ```
 
-6. 依次运行：
+6. 在 `Generated Parent Folder` 选择生成父目录。默认是：
+
+   ```text
+   Assets/UI/Generated
+   ```
+
+   每个 UI 会生成到：
+
+   ```text
+   <Generated Parent>/<PackageId>/
+   ```
+
+7. 依次运行：
 
    ```text
    Validate
@@ -135,11 +146,37 @@ Package Manager
    Refresh Preview
    ```
 
-7. 运行时打开 UI：
+8. 运行时打开 UI：
 
    ```csharp
    await UIManager.Instance.OpenAsync("<PackageId>");
    ```
+
+### 示例：Inventory Panel Sample
+
+Package 内置一个可直接打开的样例：
+
+```text
+Packages/com.kk.ui-umg/Sample/InventoryPanelSample/
+```
+
+它展示完整链路：Source JSON、静态 `locKey`、动态 Store 字段、Generated Prefab、Addressables、`UIManager.OpenAsync`、手写 Controller partial、业务 `IInventoryService` 注册和运行时数据更新。
+
+导入 package 后运行：
+
+```text
+KK_UI_UMG/Sample/Open Inventory Panel Sample
+```
+
+该菜单会注册 package 内 Generated prefab 的 Addressables key，并打开：
+
+```text
+Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Scene/KkSampleInventorySample.unity
+```
+
+Play 后即可看到样例 UI 自动打开。
+
+样例中的 Source / Generated / Scene / Scripts 都在 package 内，方便随 package 一起交付。真实项目中仍以 `Assets/UI/Source/<PackageId>/` 为源头，通过 `KK_UI_UMG/KKPipeline` 重新生成项目自己的 UI。
 
 ## 项目亮点
 
@@ -193,11 +230,14 @@ UGUI event
 
 ```text
 Assets/UI/Source/<PackageId>/          # 人和 AI 维护的源头
-Assets/UI/Generated/<PackageId>/       # 可重建生成物
-Assets/UI/<PackageId>/<PackageId>Controller.cs  # 手写业务 partial
+<Generated Parent>/<PackageId>/Scripts # 生成 C#
+<Generated Parent>/<PackageId>/Prefabs # 生成 Prefab
+<Generated Parent>/<PackageId>/Reports # 生成报告
+<Generated Parent>/<PackageId>/Assets  # 复制后的运行时资产
+<Generated Parent>/<PackageId>/<PackageId>Controller.cs  # 手写业务 partial
 ```
 
-生成器可以覆盖 Generated 文件，但不会覆盖手写 Controller partial。
+生成器拥有 `Scripts/`、`Prefabs/`、`Reports/`、`Assets/` 子目录；手写业务 partial 放在对应 UI 文件夹根目录，不放进 `Scripts/`。
 
 ### AI Authoring Skill 随包交付
 

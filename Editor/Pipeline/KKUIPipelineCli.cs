@@ -18,7 +18,11 @@ namespace KK.UI.UMG.Editor.Pipeline
                 return;
             }
 
-            var result = new KKUIPipeline().Run(args[packageIndex + 1]);
+            var generatedParentIndex = Array.IndexOf(args, "--generated-parent");
+            var generatedParentPath = generatedParentIndex >= 0 && generatedParentIndex + 1 < args.Length
+                ? args[generatedParentIndex + 1]
+                : null;
+            var result = new KKUIPipeline().Run(args[packageIndex + 1], generatedParentPath);
             if (!result.Success)
             {
                 Debug.LogError(result.Error ?? string.Join("\n", result.Issues.Select(issue => $"{issue.Severity} {issue.Code}: {issue.Message}")));

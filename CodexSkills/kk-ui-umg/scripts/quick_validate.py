@@ -27,6 +27,8 @@ REQUIRED_TEXT = [
     "Static UI copy uses",
     "dynamic Store fields",
     "locKey",
+    "Generated Parent Folder",
+    "<Generated Parent>/<PackageId>/<PackageId>Controller.cs",
 ]
 
 

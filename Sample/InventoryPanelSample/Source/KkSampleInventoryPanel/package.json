@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "packageId": "KkSampleInventoryPanel",
+  "namespace": "KK.UI.UMG.Samples.Inventory",
+  "version": "1.0.0",
+  "designResolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "manifests": {
+    "layout": "layout.json",
+    "assets": "assets.json",
+    "bindings": "bindings.json",
+    "codegen": "codegen.json",
+    "strings": "strings.json"
+  },
+  "addressablesGroup": "UI",
+  "sharedAssetRoots": [
+    "Assets/TextMesh Pro/Resources/Fonts & Materials/",
+    "Assets/TextMesh Pro/Shaders/",
+    "Assets/TextMesh Pro/Fonts/"
+  ],
+  "v1": {
+    "controls": [
+      "Panel",
+      "Text",
+      "Image",
+      "Button",
+      "RawImage",
+      "Toggle",
+      "Slider",
+      "InputField",
+      "Dropdown",
+      "Scrollbar",
+      "ScrollView",
+      "VerticalList"
+    ]
+  }
+}

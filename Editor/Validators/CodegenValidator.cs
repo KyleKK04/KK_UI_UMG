@@ -32,15 +32,20 @@ namespace KK.UI.UMG.Editor.Validators
                 context.Add(KKUIPipelineIssueSeverity.Error, "GEN006", $"addressablesKey must be '{expectedAddress}'.");
             }
 
-            var outputRoot = Path.GetFullPath(Path.Combine(context.SourceRoot, context.Codegen.OutputRoot));
+            var outputRoot = Path.GetFullPath(context.GeneratedRoot);
             var sourceRoot = Path.GetFullPath(context.SourceRoot);
             var expectedSuffix = Path.Combine("Assets", "UI", "Generated", context.Package.PackageId);
-            if (!outputRoot.Replace('\\', '/').EndsWith(expectedSuffix.Replace('\\', '/')))
+            if (!context.HasGeneratedParentOverride && !outputRoot.Replace('\\', '/').EndsWith(expectedSuffix.Replace('\\', '/')))
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "GEN003", $"outputRoot '{context.Codegen.OutputRoot}' must resolve to Assets/UI/Generated/{context.Package.PackageId}.");
             }
 
-            if (outputRoot.StartsWith(sourceRoot))
+            if (context.HasGeneratedParentOverride)
+            {
+                ValidateGeneratedParentOverride(context, outputRoot);
+            }
+
+            if (IsUnderDirectory(outputRoot, sourceRoot))
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "GEN005", $"outputRoot '{context.Codegen.OutputRoot}' must not be inside Source/.");
             }
@@ -93,6 +98,30 @@ namespace KK.UI.UMG.Editor.Validators
                     context.Add(KKUIPipelineIssueSeverity.Error, "CG023", $"requiredServices[].property '{service.Property}' conflicts with a generated Controller member.");
                 }
             }
+        }
+
+        private static void ValidateGeneratedParentOverride(KKUIPipelineContext context, string outputRoot)
+        {
+            var generatedParent = Path.GetFullPath(context.GeneratedParentOverride);
+            var expectedOutputRoot = Path.GetFullPath(Path.Combine(generatedParent, context.Package.PackageId));
+            if (!string.Equals(outputRoot, expectedOutputRoot, System.StringComparison.OrdinalIgnoreCase))
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "GEN008", $"Generated output root must be '<Generated Parent>/{context.Package.PackageId}'.");
+            }
+
+            var parentAssetPath = AssetManifestUtility.NormalizeAssetPath(AssetManifestUtility.ToAssetPath(generatedParent));
+            if (!parentAssetPath.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase) &&
+                !parentAssetPath.StartsWith("Packages/", System.StringComparison.OrdinalIgnoreCase))
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "GEN009", "Generated Parent must be inside this Unity project under Assets/ or Packages/.");
+            }
+        }
+
+        private static bool IsUnderDirectory(string path, string directory)
+        {
+            var normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var normalizedDirectory = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return normalizedPath.StartsWith(normalizedDirectory, System.StringComparison.OrdinalIgnoreCase);
         }
 
         private static HashSet<string> GetReservedControllerMembers(KKUIPipelineContext context)

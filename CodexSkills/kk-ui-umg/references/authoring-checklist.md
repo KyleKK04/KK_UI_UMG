@@ -23,6 +23,7 @@ Use this checklist before returning work to the user.
 - Use `layoutElement` for stable button, input, text, and list item sizing.
 - Keep `v1.controls` limited to the controls used.
 - Use `addressablesKey: UI/<PackageId>/<PackageId>View`.
+- In `KK_UI_UMG/KKPipeline`, use `Generated Parent Folder` to choose the output parent. The default is `Assets/UI/Generated`; generated output goes to `<Generated Parent>/<PackageId>/`.
 - In `README.md`, record UI name, packageId, purpose, entry path, main areas, controls, layoutComponents, generated output, and delivery status.
 - In `validation.md`, include the v0.7.1 pipeline ledger markers. The pipeline owns only the marker block; keep manual notes outside it.
 - For runtime setup notes, tell the user to add a scene GameObject with `KK.UI.UMG.UIManager`, then open the UI with `UIManager.Instance.OpenAsync("<PackageId>")`.
@@ -37,7 +38,7 @@ Use this checklist before returning work to the user.
 - For a new list field, update the `VerticalList` item template and item bindings.
 - For a new image or sprite, verify the real asset path and update `assets.json`.
 - If the user asks to connect external business data, read `business-adapter.md`, add `codegen.requiredServices`, and use a UI-facing service adapter instead of inventing business model fields in `bindings.json`.
-- Handwritten Controller partials belong at `Assets/UI/<PackageId>/<PackageId>Controller.cs`; do not create `Controllers/`, `Business/`, or `Partial/` subfolders and do not put them under `Assets/UI/Generated/`.
+- Handwritten Controller partials belong at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`; do not create `Controllers/`, `Business/`, or `Partial/` subfolders and do not put them inside the generated-owned `Scripts/` folder.
 - Report any new or changed handwritten Controller handlers required.
 
 ## MVVM-C Boundary

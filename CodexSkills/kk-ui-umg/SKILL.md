@@ -15,11 +15,11 @@ When a user has just imported the package and wants to create their own UI, this
 
 - Read existing Source files before changing them.
 - Do not guess existing node ids, field ids, handler names, asset ids, or loc keys.
-- Do not edit `Assets/UI/Generated/`.
+- Do not edit generated-owned files under `<Generated Parent>/<PackageId>/Scripts`, `Prefabs`, `Reports`, or `Assets`.
 - Do not write business Controller implementation unless the user explicitly asks for handwritten business code.
 - New UI authoring is UI-first by default. Do not add `requiredServices` until the user asks to connect business data.
 - If a UI needs existing business data or commands, declare `codegen.requiredServices` and create a UI-facing service adapter; do not put business model types or query logic into Source JSON.
-- Handwritten Controller partials live at `Assets/UI/<PackageId>/<PackageId>Controller.cs`. Do not create `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials under `Assets/UI/Generated/`.
+- Handwritten business Controller partials live at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`, next to `Scripts/`, `Prefabs/`, `Reports/`, and `Assets/`. Do not create `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials inside the generated-owned `Scripts/` folder.
 - If stale Generated scripts would make a generated service property unavailable, handwritten Controller code may call `RequireService<T>()` directly while keeping `codegen.requiredServices` declared.
 - Static UI copy uses `layout.json` `locKey` plus `strings.json`. Static titles, labels, button text, placeholders, section headers, and fixed empty prompts do not need `bindings.json` fields, Store fields, Controller initialization, or Binder refresh.
 - Dynamic Text enters `bindings.json` only when it changes at runtime, comes from business data, service callbacks, counts, progress, status, player data, item data, task data, or list item data.
@@ -65,7 +65,7 @@ When a user has just imported the package and wants to create their own UI, this
 2. Read the existing business type requested by the user, such as `PlayerController`.
 3. Read `references/business-adapter.md`.
 4. Generate or update a UI-facing `I<Feature>Service` contract and one adapter MonoBehaviour in the business directory.
-5. Put or update the handwritten Controller partial at `Assets/UI/<PackageId>/<PackageId>Controller.cs` so the UI only depends on the service interface.
+5. Put or update the handwritten Controller partial at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs` so the UI only depends on the service interface.
 6. Update `codegen.requiredServices`.
 7. If the business type lacks public getters or changed events, add the minimum public API/event needed; never use reflection to read private fields.
 8. Validate, Generate, Verify if possible, then report Runtime pending or verified.
@@ -81,9 +81,10 @@ For a newly imported package, explain this runtime setup whenever the user asks 
 1. Add a GameObject in the scene, commonly named `UIManager`.
 2. Attach the package runtime component `KK.UI.UMG.UIManager` to that GameObject.
 3. A child `Canvas` is optional. `UIManager` will use an existing child/scene `Canvas` or create a `UIRoot` Canvas and `EventSystem` if needed.
-4. Run `Validate`, `Generate`, and `Verify` from `KK_UI_UMG/KKPipeline`.
-5. Open generated UI with `await UIManager.Instance.OpenAsync("<PackageId>");`.
-6. Close generated UI with `await UIManager.Instance.CloseAsync("<PackageId>");`.
+4. In `Generated Parent Folder`, choose where generated UI folders are written. The default is `Assets/UI/Generated`, and each package writes to `<Generated Parent>/<PackageId>/`.
+5. Run `Validate`, `Generate`, and `Verify` from `KK_UI_UMG/KKPipeline`.
+6. Open generated UI with `await UIManager.Instance.OpenAsync("<PackageId>");`.
+7. Close generated UI with `await UIManager.Instance.CloseAsync("<PackageId>");`.
 
 `UIManager` owns runtime UI lifecycle:
 
@@ -152,7 +153,33 @@ Generated prefabs are not normally opened by dragging them into the scene. The r
 
 Generated runtime code registers Controller factories during load. Do not put Controller components on the prefab and do not make Controller singletons. The prefab carries the generated View; `UIManager` creates the Controller for each Open and destroys it on Close.
 
-When a UI declares `codegen.requiredServices`, the scene must register those services on `UIManager` before opening that UI. Business adapters should register in `OnEnable` and unregister in `OnDisable` or equivalent lifecycle code.
+When a UI declares `codegen.requiredServices`, the scene must register those services on `UIManager` before opening that UI. Business adapters should register in `Start` and unregister in `OnDestroy` or an equivalent lifecycle that does not depend on `Awake` / `OnEnable` ordering across GameObjects.
+
+## Package Sample
+
+The package ships one visible sample inside the package:
+
+```text
+Packages/com.kk.ui-umg/Sample/InventoryPanelSample/
+```
+
+Tell users to run:
+
+```text
+KK_UI_UMG/Sample/Open Inventory Panel Sample
+```
+
+The menu registers the package prefab Addressables key `UI/KkSampleInventoryPanel/KkSampleInventoryPanelView` and opens `Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Scene/KkSampleInventorySample.unity`.
+
+Use this sample as the reference for a complete business-backed UI:
+
+- Source JSON at `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel`.
+- Generated quick-start output at `Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel`.
+- Handwritten Controller partial at `Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/KkSampleInventoryPanelController.cs`.
+- Demo business service under `Sample/InventoryPanelSample/Scripts/Inventory`.
+- Runtime open path through `UIManager.Instance.OpenAsync("KkSampleInventoryPanel")`.
+
+The included Generated files are package sample artifacts. For new project work, keep project Source JSON under `Assets/UI/Source/<PackageId>` as the source of truth and do not hand-edit project Generated files.
 
 ## References
 
@@ -249,4 +276,4 @@ Packages/com.kk.ui-umg/
 
 Project-level `Assets/` content is consumer/example content and is not part of the pipeline package release contract. Do not use the state of `Assets/UI/Source/...`, `Assets/UI/Generated/...`, or scene bootstrap scripts as evidence that the UPM package is or is not releasable.
 
-The UPM release tarball should include `Runtime/`, `Editor/`, `CodexSkills/`, `README.md`, `CHANGELOG.md`, `LICENSE.md`, and `package.json`. By default, release packaging excludes package development `Tests/`; tests remain in the source repository unless fixtures are moved into the package or samples are published through `Samples~`.
+The UPM release tarball should include `Runtime/`, `Editor/`, `CodexSkills/`, `Sample/`, `README.md`, `CHANGELOG.md`, `LICENSE.md`, and `package.json`. By default, release packaging excludes package development `Tests/`; tests remain in the source repository.

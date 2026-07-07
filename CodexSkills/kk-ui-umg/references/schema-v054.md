@@ -222,7 +222,7 @@ Rules:
 - Add assets only when a real source path exists.
 - Do not fabricate image, font, sprite, material, or texture paths.
 - Source-owned assets live under `Assets/UI/Source/<PackageId>/Assets/`.
-- Source-owned assets must target `Assets/UI/Generated/<PackageId>/Assets/...`.
+- Source-owned assets target `<Generated Parent>/<PackageId>/Assets/...`; default manifests still use `Assets/UI/Generated/<PackageId>/Assets/...`.
 - Shared assets must be under `sharedAssetRoots`.
 - `contentHash` is optional in the current static asset strategy. If present, verify `sha256:`. If absent, report a Warning and actual hash, but do not block generation.
 - The current static asset strategy supports static `Sprite` references for `Image`; do not imply runtime Addressables asset-key sprite loading.
@@ -233,6 +233,7 @@ Rules:
 
 - Use `<PackageId>View`, `<PackageId>Controller`, and `<PackageId>ViewModel`.
 - Default `outputRoot` is `../../Generated/<PackageId>`.
+- The Editor `Generated Parent Folder` can override `outputRoot` for Validate / Generate / Verify. With parent `Assets/UI/Generated`, output goes to `Assets/UI/Generated/<PackageId>/`.
 - Default `addressablesKey` is `UI/<PackageId>/<PackageId>View`.
 - Generated Controller contains event entry points only. Business logic belongs in handwritten partial code when explicitly requested.
 - New UI authoring is UI-first by default. Do not add `requiredServices` unless the user asks to connect external business data.
@@ -254,7 +255,7 @@ Example:
 
 `type` is the full C# interface type name. `property` is the protected generated Controller property name. Handwritten Controller partial code may use the generated property to query business data, execute business commands, subscribe to business changes, and map business models into Store fields.
 
-Handwritten Controller partials must be placed at `Assets/UI/<PackageId>/<PackageId>Controller.cs`. Do not create extra `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials under `Assets/UI/Generated/`.
+Handwritten Controller partials must be placed at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`. Do not create extra `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials inside `<Generated Parent>/<PackageId>/Scripts/`.
 
 When the handwritten Controller must stay compilable before regenerated scripts exist, it may call `RequireService<T>()` directly in the partial code. The `requiredServices` declaration is still required so generated code resolves the service before partial hooks after Generate.
 

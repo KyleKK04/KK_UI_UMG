@@ -10,6 +10,7 @@ namespace KK.UI.UMG.Editor.Pipeline
     internal static class PendingPrefabGenerationScheduler
     {
         private const string PendingManifestKey = "KK.UI.UMG.PendingPrefabManifestPath";
+        private const string PendingGeneratedParentKey = "KK.UI.UMG.PendingPrefabGeneratedParentPath";
         private const string NextRunTimeKey = "KK.UI.UMG.PendingPrefabNextRunTime";
         private static bool _isRunningContinuation;
 
@@ -21,7 +22,7 @@ namespace KK.UI.UMG.Editor.Pipeline
 
         public static bool IsRunningContinuation => _isRunningContinuation;
 
-        public static void Schedule(string packageManifestPath)
+        public static void Schedule(string packageManifestPath, string generatedParentPath = null)
         {
             if (string.IsNullOrWhiteSpace(packageManifestPath))
             {
@@ -29,6 +30,15 @@ namespace KK.UI.UMG.Editor.Pipeline
             }
 
             SessionState.SetString(PendingManifestKey, Path.GetFullPath(packageManifestPath));
+            if (string.IsNullOrWhiteSpace(generatedParentPath))
+            {
+                SessionState.EraseString(PendingGeneratedParentKey);
+            }
+            else
+            {
+                SessionState.SetString(PendingGeneratedParentKey, Path.GetFullPath(generatedParentPath));
+            }
+
             SessionState.SetFloat(NextRunTimeKey, (float)(EditorApplication.timeSinceStartup + 0.5d));
             EditorApplication.update -= ContinueIfReady;
             EditorApplication.update += ContinueIfReady;
@@ -52,6 +62,7 @@ namespace KK.UI.UMG.Editor.Pipeline
             }
 
             var packageManifestPath = SessionState.GetString(PendingManifestKey, string.Empty);
+            var generatedParentPath = SessionState.GetString(PendingGeneratedParentKey, string.Empty);
             if (string.IsNullOrWhiteSpace(packageManifestPath))
             {
                 return;
@@ -60,6 +71,7 @@ namespace KK.UI.UMG.Editor.Pipeline
             if (!File.Exists(packageManifestPath))
             {
                 SessionState.EraseString(PendingManifestKey);
+                SessionState.EraseString(PendingGeneratedParentKey);
                 SessionState.EraseString(NextRunTimeKey);
                 Debug.LogWarning($"[KK_UI_UMG] Pending Generate skipped because manifest does not exist: {packageManifestPath}");
                 return;
@@ -69,11 +81,12 @@ namespace KK.UI.UMG.Editor.Pipeline
             try
             {
                 SessionState.EraseString(PendingManifestKey);
+                SessionState.EraseString(PendingGeneratedParentKey);
                 SessionState.EraseString(NextRunTimeKey);
-                var result = new KKUIPipeline().Run(packageManifestPath);
+                var result = new KKUIPipeline().Run(packageManifestPath, generatedParentPath);
                 if (result.Status == "PendingCompile")
                 {
-                    Schedule(packageManifestPath);
+                    Schedule(packageManifestPath, generatedParentPath);
                 }
                 else if (!result.Success)
                 {

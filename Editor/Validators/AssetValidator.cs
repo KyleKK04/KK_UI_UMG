@@ -61,9 +61,9 @@ namespace KK.UI.UMG.Editor.Validators
             }
 
             var source = AssetManifestUtility.NormalizeAssetPath(asset.Source);
-            if (string.IsNullOrWhiteSpace(source) || !source.StartsWith("Assets/") || !File.Exists(source))
+            if (string.IsNullOrWhiteSpace(source) || !IsUnityAssetPath(source) || !File.Exists(source))
             {
-                context.Add(KKUIPipelineIssueSeverity.Error, "AST004", $"Asset '{asset.Id}' source '{asset.Source}' must be an existing Assets/ file.");
+                context.Add(KKUIPipelineIssueSeverity.Error, "AST004", $"Asset '{asset.Id}' source '{asset.Source}' must be an existing Assets/ or Packages/ file.");
                 return;
             }
 
@@ -77,9 +77,10 @@ namespace KK.UI.UMG.Editor.Validators
             if (isSourceAsset)
             {
                 var target = AssetManifestUtility.ResolveTargetAssetPath(context, asset);
-                if (string.IsNullOrWhiteSpace(target) || !AssetManifestUtility.IsUnderAssetPath(target, AssetManifestUtility.GeneratedAssetsRoot(context)))
+                var generatedAssetsRoot = AssetManifestUtility.GeneratedAssetsRoot(context);
+                if (string.IsNullOrWhiteSpace(target) || !AssetManifestUtility.IsUnderAssetPath(target, generatedAssetsRoot))
                 {
-                    context.Add(KKUIPipelineIssueSeverity.Error, "AST006", $"Asset '{asset.Id}' target must resolve under Assets/UI/Generated/{context.Package.PackageId}/Assets.");
+                    context.Add(KKUIPipelineIssueSeverity.Error, "AST006", $"Asset '{asset.Id}' target must resolve under {generatedAssetsRoot}.");
                 }
             }
 
@@ -89,6 +90,11 @@ namespace KK.UI.UMG.Editor.Validators
             }
 
             ValidateHash(context, asset, source);
+        }
+
+        private static bool IsUnityAssetPath(string path)
+        {
+            return path.StartsWith("Assets/") || path.StartsWith("Packages/");
         }
 
         private static void RequireAssetId(KKUIPipelineContext context, Dictionary<string, UiAssetSpec> byId, string id, string expectedType, string label)

@@ -97,7 +97,7 @@ Generated or handwritten Controller code reads payload in `Initialize(payload)` 
 
 ## Service Adapter Registration
 
-If `codegen.requiredServices` is declared, register services before opening the UI:
+If `codegen.requiredServices` is declared, register services before opening the UI. Prefer `Start()` so the adapter does not depend on `Awake` / `OnEnable` ordering across GameObjects:
 
 ```csharp
 using KK.UI.UMG;
@@ -105,18 +105,26 @@ using UnityEngine;
 
 public sealed class PlayerHudServiceAdapter : MonoBehaviour, IPlayerHudService
 {
-    [SerializeField] private UIManager _uiManager;
+    private UIManager _registeredManager;
 
-    private void OnEnable()
+    private void Start()
     {
-        _uiManager.RegisterService<IPlayerHudService>(this);
+        _registeredManager = UIManager.Instance;
+        if (_registeredManager == null)
+        {
+            Debug.LogError("PlayerHudServiceAdapter requires a UIManager in the scene.");
+            return;
+        }
+
+        _registeredManager.RegisterService<IPlayerHudService>(this);
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
-        if (_uiManager != null)
+        if (_registeredManager != null)
         {
-            _uiManager.UnregisterService<IPlayerHudService>();
+            _registeredManager.UnregisterService<IPlayerHudService>();
+            _registeredManager = null;
         }
     }
 }

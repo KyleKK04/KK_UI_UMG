@@ -41,7 +41,7 @@ namespace KK.UI.UMG.Editor.Pipeline
         private static readonly Color PreviewBackground = new Color(0.08f, 0.1f, 0.14f, 1f);
         private static readonly Vector3 PreviewOrigin = new Vector3(100000f, 100000f, 0f);
 
-        public PrefabPreviewResult Render(string packageManifestPath)
+        public PrefabPreviewResult Render(string packageManifestPath, string generatedParentPath = null)
         {
             if (string.IsNullOrWhiteSpace(packageManifestPath))
             {
@@ -50,7 +50,7 @@ namespace KK.UI.UMG.Editor.Pipeline
 
             try
             {
-                return Render(KKUIPipelineContext.Load(packageManifestPath));
+                return Render(KKUIPipelineContext.Load(packageManifestPath, generatedParentPath));
             }
             catch (Exception ex)
             {

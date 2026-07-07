@@ -1,0 +1,48 @@
+{
+  "pipelineVersion": "0.9",
+  "packageId": "KkSampleInventoryPanel",
+  "operation": "Verify",
+  "status": "Succeeded",
+  "success": true,
+  "busValidation": {
+    "inRoutes": 2,
+    "outChannels": 0,
+    "issues": []
+  },
+  "localizationValidation": {
+    "defaultCulture": "zh-Hans",
+    "cultures": [
+      "zh-Hans",
+      "en-US"
+    ],
+    "declaredKeys": 14,
+    "usedKeys": 8,
+    "issues": []
+  },
+  "componentStats": {
+    "Panel": 9,
+    "Image": 5,
+    "Text": 13,
+    "Button": 4,
+    "InputField": 1,
+    "Dropdown": 1,
+    "Toggle": 1,
+    "Slider": 1,
+    "VerticalList": 1,
+    "RawImage": 1,
+    "ScrollView": 1,
+    "Scrollbar": 1
+  },
+  "layoutComponentStats": {},
+  "generatedAt": "2026-07-07T06:06:17.6540260Z",
+  "generatedFiles": [
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Prefabs/KkSampleInventoryPanelView.prefab",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelView.Generated.cs",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelController.Generated.cs",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelViewModel.Generated.cs",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelControllerRegistration.Generated.cs",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelBus.Generated.cs",
+    "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Scripts/KkSampleInventoryPanelStrings.Generated.cs"
+  ],
+  "issues": []
+}

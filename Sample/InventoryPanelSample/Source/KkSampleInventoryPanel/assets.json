@@ -1,0 +1,60 @@
+{
+  "assets": [
+    {
+      "id": "font.default",
+      "type": "TMP_FontAsset",
+      "source": "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset",
+      "target": "",
+      "contentHash": "sha256:ceb505fb1e4a4f084bc6fe75b3cfaa1d216acecd8f590fc51800c1b71f083f2c"
+    },
+    {
+      "id": "image.inventory.panel_bg",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/inventory_panel_bg.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/inventory_panel_bg.png",
+      "contentHash": "sha256:74087de1ab77c4e2215a0023ff05cfe9fa9ba1dc535bfdae750c83f2b863a7dc"
+    },
+    {
+      "id": "image.inventory.header_icon",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/header_icon.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/header_icon.png",
+      "contentHash": "sha256:ac6c6222b22974f852c46d0e4da2c68fa307e24972ecfd8ce65ca6ed3bc1bf5a"
+    },
+    {
+      "id": "image.inventory.slot_bg",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/slot_bg.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/slot_bg.png",
+      "contentHash": "sha256:c5bfdef2efae233779b33ab38fcfcc54bf1696581e8918349206a6ef592b0711"
+    },
+    {
+      "id": "image.inventory.item_sword",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/item_sword.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/item_sword.png",
+      "contentHash": "sha256:6ba415124b91b9b53e8cd12ee9354f2b8caff28a518a5083e14b849acd5880c1"
+    },
+    {
+      "id": "image.inventory.item_shield",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/item_shield.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/item_shield.png",
+      "contentHash": "sha256:6a4c64107c9fe68db3bbc2a0e3b1e8e483a567b87b1e2cb5e51c52531653a68e"
+    },
+    {
+      "id": "image.inventory.item_potion",
+      "type": "Sprite",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Images/item_potion.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Images/item_potion.png",
+      "contentHash": "sha256:87fb767bf020c00b0c04496536682912826e20db99e0721c7fa7c26acefb2113"
+    },
+    {
+      "id": "texture.inventory.preview",
+      "type": "Texture",
+      "source": "Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Source/KkSampleInventoryPanel/Assets/Textures/preview_texture.png",
+      "target": "../../Generated/KkSampleInventoryPanel/Assets/Textures/preview_texture.png",
+      "contentHash": "sha256:7ac7fc0bc15e3ed72253976b9fd1716d9812ad04c784c67917bde09260a7a027"
+    }
+  ]
+}
