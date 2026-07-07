@@ -43,30 +43,22 @@ KK_UI_UMG 适合这些 Unity 项目：
 
 Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addressables、UGUI 以及 Editor pipeline 内部使用的 Unity Newtonsoft Json 依赖。用户业务 Runtime 代码不需要直接使用 Newtonsoft Json；TextMeshPro 字体资产需要项目侧准备。
 
-### 方式一：从 GitHub 安装
+授权以 `LICENSE.md` 和 `package.json` 为准。当前 package 标记为 `UNLICENSED`，如果要作为公开开源项目接受外部使用，需要先更新授权策略。
 
-```json
-{
-  "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.1"
-  }
-}
-```
+### 方式一：从 Release tarball 安装
 
-### 方式二：从 tarball 安装
-
-正式 Release 后，可以从 GitHub Release 下载：
+普通用户推荐使用 GitHub Release 中的 tarball。tarball 是正式交付包，不包含 package 开发用 `Tests/`。
 
 ```text
-com.kk.ui-umg-1.0.1.tgz
+com.kk.ui-umg-1.0.2.tgz
 ```
 
-然后在 Unity Package Manager 中选择：
+在 Unity Package Manager 中选择：
 
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.1.tgz
+  -> com.kk.ui-umg-1.0.2.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -74,10 +66,22 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.1.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.2.tgz"
   }
 }
 ```
+
+### 方式二：从 GitHub 安装
+
+```json
+{
+  "dependencies": {
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.2"
+  }
+}
+```
+
+Git URL 更适合希望跟随源码、调试 package 或查看测试代码的开发者。源码仓库会包含开发用 `Tests/`，tarball 默认不会包含。
 
 ### 方式三：本地嵌入开发
 
@@ -112,6 +116,8 @@ Package Manager
    ```text
    KK.UI.UMG.UIManager
    ```
+
+   也可以在 `KK_UI_UMG/Setting` 中点击 `Create UIManager In Scene`。
 
 4. 打开主面板：
 
@@ -162,21 +168,9 @@ Packages/com.kk.ui-umg/Sample/InventoryPanelSample/
 
 它展示完整链路：Source JSON、静态 `locKey`、动态 Store 字段、Generated Prefab、Addressables、`UIManager.OpenAsync`、手写 Controller partial、业务 `IInventoryService` 注册和运行时数据更新。
 
-导入 package 后运行：
-
-```text
-KK_UI_UMG/Sample/Open Inventory Panel Sample
-```
-
-该菜单会注册 package 内 Generated prefab 的 Addressables key，并打开：
-
-```text
-Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Scene/KkSampleInventorySample.unity
-```
-
-Play 后即可看到样例 UI 自动打开。
-
 样例中的 Source / Generated / Scene / Scripts 都在 package 内，方便随 package 一起交付。真实项目中仍以 `Assets/UI/Source/<PackageId>/` 为源头，通过 `KK_UI_UMG/KKPipeline` 重新生成项目自己的 UI。
+
+新 UI 推荐把 sample 当作 AI authoring 模板：让 Codex 参考 `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` 的 Source JSON 结构，生成你项目中的 `Assets/UI/Source/<PackageId>/`。不要把 sample 的 Generated 输出当作手写模板。
 
 ## 项目亮点
 

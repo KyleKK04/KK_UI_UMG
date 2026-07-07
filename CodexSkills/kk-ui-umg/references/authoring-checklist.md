@@ -83,6 +83,7 @@ Failure handling:
 - Validate failure: fix Source JSON.
 - Generate failure: inspect manifest and generator errors; do not edit Generated.
 - Verify failure: check generated file count, prefab references, Addressables key, Inspector events, Source/Generated asset boundaries, and Canvas/root requirements.
+- Use `references/issue-codes.md` to explain issue codes with concise fix directions.
 
 ## Final Report
 

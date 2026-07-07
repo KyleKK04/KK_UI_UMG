@@ -28,24 +28,34 @@ Assets/UI/Source/<PackageId>/
 
 Generated output in this sample is included so the scene can run directly from the package.
 
+## Use As Template
+
+For new UI packages, use this sample as the primary authoring reference. Ask Codex / the `kk-ui-umg` skill to read:
+
+```text
+Sample/InventoryPanelSample/Source/KkSampleInventoryPanel
+```
+
+Then generate a project-owned Source package under:
+
+```text
+Assets/UI/Source/<PackageId>
+```
+
+Do not hand-copy or hand-edit the sample `Generated/` output as a template. Generated files are quick-start artifacts and can be rebuilt from Source JSON.
+
 ## Run
 
-Use the menu:
-
-```text
-KK_UI_UMG/Sample/Open Inventory Panel Sample
-```
-
-The menu registers the package prefab as Addressable with:
-
-```text
-UI/KkSampleInventoryPanel/KkSampleInventoryPanelView
-```
-
-Then it opens:
+The sample scene is:
 
 ```text
 Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Scene/KkSampleInventorySample.unity
+```
+
+The generated prefab is expected to be Addressable with:
+
+```text
+UI/KkSampleInventoryPanel/KkSampleInventoryPanelView
 ```
 
 Enter Play Mode. The scene has a `UIManager`, demo `IInventoryService`, and bootstrap that calls:

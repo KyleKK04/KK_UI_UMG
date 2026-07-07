@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.0.2
+
+- Added a first-run checklist in `KK_UI_UMG/Setting` for Codex Skill, scene UIManager, and Addressables settings.
+- Added `Create UIManager In Scene` to the Setting window.
+- Improved `KKPipeline` result summaries with output path, prefab path, Addressables key, runtime `OpenAsync` snippet, and next-step guidance.
+- Added issue-code fix hints in the Editor result panel and documented common issue codes in `ISSUE_CODES.md`.
+- Clarified README, sample README, and Skill guidance that the package sample Source is the primary AI authoring template; Generated output remains rebuildable output.
+- Clarified install boundary: release tarball is recommended for ordinary users, while Git URL is better for following source/development.
+- Removed extra Sample and Diagnostics top-level menu shortcuts; the sample remains visible under the package `Sample/` folder.
+- Removed the user-facing `Build Package` menu item; package builds remain available through command line or internal build calls.
+
 ## 1.0.1
 
 - Added package-contained `Inventory Panel Sample` under `Sample/InventoryPanelSample`.

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 using KK.UI.UMG.Editor.Pipeline;
@@ -113,6 +114,7 @@ namespace KK.UI.UMG.Editor.Windows
             }
             EditorGUILayout.EndHorizontal();
 
+            DrawResultSummary();
             DrawPreviewPanel();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.MaxHeight(180f));
@@ -128,7 +130,11 @@ namespace KK.UI.UMG.Editor.Windows
                 {
                     var type = issue.Severity == KKUIPipelineIssueSeverity.Error ? MessageType.Error :
                         issue.Severity == KKUIPipelineIssueSeverity.Warning ? MessageType.Warning : MessageType.Info;
-                    EditorGUILayout.HelpBox($"{issue.Code}: {issue.Message}", type);
+                    var hint = IssueHintCatalog.GetHint(issue.Code);
+                    var message = string.IsNullOrWhiteSpace(hint)
+                        ? $"{issue.Code}: {issue.Message}"
+                        : $"{issue.Code}: {issue.Message}\nFix: {hint}";
+                    EditorGUILayout.HelpBox(message, type);
                 }
             }
             EditorGUILayout.EndScrollView();
@@ -168,6 +174,7 @@ namespace KK.UI.UMG.Editor.Windows
                     PingManifest();
                 }
             }
+
             EditorGUILayout.EndHorizontal();
         }
 
@@ -391,12 +398,13 @@ namespace KK.UI.UMG.Editor.Windows
             var normalized = NormalizeAssetPath(path);
             if (string.IsNullOrWhiteSpace(normalized))
             {
-                return "Select a package.json manifest under Assets/UI/Source.";
+                return "Select a package.json manifest under Assets/ or Packages/.";
             }
 
-            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal))
+            if (!normalized.StartsWith("Assets/", StringComparison.Ordinal) &&
+                !normalized.StartsWith("Packages/", StringComparison.Ordinal))
             {
-                return "Package manifest must be an Assets-relative path.";
+                return "Package manifest must be an Assets/ or Packages/ relative path.";
             }
 
             if (!string.Equals(Path.GetFileName(normalized), "package.json", StringComparison.Ordinal))
@@ -485,6 +493,84 @@ namespace KK.UI.UMG.Editor.Windows
                 .Select(NormalizeAssetPath)
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .FirstOrDefault() ?? string.Empty;
+        }
+
+        private void DrawResultSummary()
+        {
+            if (_lastResult == null)
+            {
+                return;
+            }
+
+            var messageType = _lastResult.Status == "PendingCompile"
+                ? MessageType.Warning
+                : _lastResult.Success ? MessageType.Info : MessageType.Error;
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.HelpBox(BuildResultSummary(), messageType);
+        }
+
+        private string BuildResultSummary()
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"{_lastResult.Operation}: {GetReadableResultStatus(_lastResult)}");
+
+            if (!string.IsNullOrWhiteSpace(_lastResult.Error))
+            {
+                builder.AppendLine($"Error: {_lastResult.Error}");
+            }
+
+            try
+            {
+                var context = KKUIPipelineContext.Load(_packageManifestPath, GetGeneratedParentPath());
+                var generatedRoot = AssetManifestUtility.ToAssetPath(context.GeneratedRoot);
+                var prefabPath = $"{generatedRoot}/Prefabs/{context.Package.PackageId}View.prefab";
+                builder.AppendLine($"Output: {generatedRoot}");
+                builder.AppendLine($"Prefab: {prefabPath}");
+                builder.AppendLine($"Addressables Key: {context.Codegen.AddressablesKey}");
+                builder.AppendLine($"Runtime Open: await UIManager.Instance.OpenAsync(\"{context.Package.PackageId}\");");
+            }
+            catch
+            {
+                // The detailed issue list below will show the manifest load/validation problem.
+            }
+
+            builder.AppendLine($"Next: {GetNextStepHint(_lastResult)}");
+            return builder.ToString().TrimEnd();
+        }
+
+        private static string GetReadableResultStatus(KKUIPipelineResult result)
+        {
+            if (result.Status == "PendingCompile")
+            {
+                return "Pending Compile";
+            }
+
+            return result.Success ? "Passed" : "Failed";
+        }
+
+        private static string GetNextStepHint(KKUIPipelineResult result)
+        {
+            if (result.Status == "PendingCompile")
+            {
+                return "Wait for Unity compilation. Prefab generation will continue automatically.";
+            }
+
+            if (!result.Success)
+            {
+                return "Fix the errors shown below, then run the same step again.";
+            }
+
+            switch (result.Operation)
+            {
+                case "Validate":
+                    return "Run Generate.";
+                case "Generate":
+                    return "Run Verify to check the generated prefab and refresh Preview.";
+                case "Verify":
+                    return "Add UIManager to the scene, register any required services, then call OpenAsync.";
+                default:
+                    return "Continue with the next pipeline step.";
+            }
         }
 
         private void RenderPreview()

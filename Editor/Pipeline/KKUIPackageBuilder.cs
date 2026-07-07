@@ -15,7 +15,6 @@ namespace KK.UI.UMG.Editor.Pipeline
         private static PackRequest _request;
         private static string _outputDirectory;
 
-        [MenuItem("KK_UI_UMG/Build Package", priority = 100)]
         public static void BuildPackage()
         {
             if (_request != null && !_request.IsCompleted)

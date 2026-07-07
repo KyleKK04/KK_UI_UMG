@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using UnityEditor.AddressableAssets;
+using UnityEditor.SceneManagement;
 using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -31,12 +33,20 @@ namespace KK.UI.UMG.Editor.Windows
         private void OnGUI()
         {
             EditorGUILayout.LabelField("KK_UI_UMG", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Install the Codex skill before AI authoring.\nSkill: kk-ui-umg\nRuntime: add a scene GameObject with KK.UI.UMG.UIManager.", MessageType.Info);
+            EditorGUILayout.HelpBox("First run checklist for AI authoring, sample preview, and runtime UI opening.", MessageType.Info);
             EditorGUILayout.Space(6f);
 
+            DrawChecklist();
+
+            EditorGUILayout.Space(6f);
             if (GUILayout.Button("Install Codex Skill"))
             {
                 InstallSkill();
+            }
+
+            if (GUILayout.Button("Create UIManager In Scene"))
+            {
+                CreateUIManagerInScene();
             }
 
             if (GUILayout.Button("Open KKPipeline"))
@@ -49,6 +59,23 @@ namespace KK.UI.UMG.Editor.Windows
                 EditorGUILayout.Space(8f);
                 EditorGUILayout.HelpBox(_statusMessage, _statusType);
             }
+        }
+
+        private void DrawChecklist()
+        {
+            EditorGUILayout.LabelField("Checklist", EditorStyles.boldLabel);
+            DrawStatus("Codex Skill", IsSkillInstalled(), "kk-ui-umg installed", "Install kk-ui-umg skill");
+            DrawStatus("Scene UIManager", HasSceneUIManager(), "UIManager found in scene", "Add KK.UI.UMG.UIManager");
+            DrawStatus("Addressables", HasAddressablesSettings(), "Addressables settings found", "Generate UI to create/register settings");
+        }
+
+        private static void DrawStatus(string label, bool ok, string pass, string fail)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(label, GUILayout.Width(150f));
+            EditorGUILayout.LabelField(ok ? "OK" : "Needs Setup", ok ? EditorStyles.boldLabel : EditorStyles.label, GUILayout.Width(95f));
+            EditorGUILayout.LabelField(ok ? pass : fail);
+            EditorGUILayout.EndHorizontal();
         }
 
         private void InstallSkill()
@@ -97,6 +124,46 @@ namespace KK.UI.UMG.Editor.Windows
             {
                 SetStatus($"Skill install failed: {ex.Message}", MessageType.Error);
             }
+        }
+
+        private void CreateUIManagerInScene()
+        {
+            var existing = UnityEngine.Object.FindFirstObjectByType<UIManager>();
+            if (existing != null)
+            {
+                Selection.activeObject = existing.gameObject;
+                EditorGUIUtility.PingObject(existing.gameObject);
+                SetStatus($"UIManager already exists in scene: {existing.name}", MessageType.Info);
+                return;
+            }
+
+            var gameObject = new GameObject("UIManager");
+            Undo.RegisterCreatedObjectUndo(gameObject, "Create KK_UI_UMG UIManager");
+            gameObject.AddComponent<UIManager>();
+            Selection.activeObject = gameObject;
+            EditorSceneManager.MarkSceneDirty(gameObject.scene);
+            SetStatus("Created scene GameObject with KK.UI.UMG.UIManager.", MessageType.Info);
+        }
+
+        private static bool IsSkillInstalled()
+        {
+            var codexHome = Environment.GetEnvironmentVariable("CODEX_HOME");
+            if (string.IsNullOrWhiteSpace(codexHome))
+            {
+                codexHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+            }
+
+            return File.Exists(Path.Combine(codexHome, "skills", "kk-ui-umg", "SKILL.md"));
+        }
+
+        private static bool HasSceneUIManager()
+        {
+            return UnityEngine.Object.FindFirstObjectByType<UIManager>() != null;
+        }
+
+        private static bool HasAddressablesSettings()
+        {
+            return AddressableAssetSettingsDefaultObject.GetSettings(false) != null;
         }
 
         private static string ResolveInstallScriptPath()

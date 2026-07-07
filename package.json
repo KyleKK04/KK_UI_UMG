@@ -1,9 +1,13 @@
 {
   "name": "com.kk.ui-umg",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "KK_UI_UMG",
   "description": "KK_UI_UMG MVVM-C UGUI pipeline for manifest-driven Unity UI generation.",
   "license": "UNLICENSED",
+  "author": {
+    "name": "KyleKK",
+    "url": "https://github.com/KyleKK04"
+  },
   "unity": "6000.3",
   "dependencies": {
     "com.unity.addressables": "2.7.4",

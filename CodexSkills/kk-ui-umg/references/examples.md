@@ -10,7 +10,13 @@ The package now ships a visible sample:
 Sample/InventoryPanelSample
 ```
 
-Run `KK_UI_UMG/Sample/Open Inventory Panel Sample` to register the package prefab Addressables key and open the runnable package scene.
+For new UI creation, prefer the sample Source folder as the authoring template:
+
+```text
+Sample/InventoryPanelSample/Source/KkSampleInventoryPanel
+```
+
+Do not use `Sample/InventoryPanelSample/Generated` as an authoring template.
 
 | Example | When to Read |
 |---|---|

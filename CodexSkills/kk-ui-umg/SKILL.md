@@ -29,7 +29,9 @@ When a user has just imported the package and wants to create their own UI, this
 - Do not introduce TwoWay automatic binding.
 - Do not attach arbitrary Unity components.
 - Use only supported manifest controls and `layoutComponents`.
+- For new UI packages, use `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` as the primary package-contained template.
 - Prefer current Source examples over copied generated output.
+- Never use sample or project Generated output as the authoring template for new Source JSON.
 - Route input events into Controller handlers only.
 - Keep View, Store, Binder, Controller, UIManager responsibilities separated.
 - Runtime opening requires a scene GameObject with the `KK.UI.UMG.UIManager` component attached.
@@ -42,7 +44,7 @@ When a user has just imported the package and wants to create their own UI, this
 
 1. Extract the UI name, purpose, regions, controls, display data, list data, events, static text, dynamic text, and assets from the user request.
 2. Ask only for missing information that would change the schema or behavior. Use safe defaults for layout and naming.
-3. Read `references/schema-v054.md` and the relevant examples listed in `references/examples.md`.
+3. Read `references/schema-v054.md` and the package sample Source listed in `references/examples.md`.
 4. Create `Assets/UI/Source/<PackageId>/package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, `validation.md`, and optional `Assets/`.
 5. Use LayoutComponents first for structure, then `layoutElement`, then rect fine-tuning.
 6. Validate, Generate, Verify if possible.
@@ -163,14 +165,6 @@ The package ships one visible sample inside the package:
 Packages/com.kk.ui-umg/Sample/InventoryPanelSample/
 ```
 
-Tell users to run:
-
-```text
-KK_UI_UMG/Sample/Open Inventory Panel Sample
-```
-
-The menu registers the package prefab Addressables key `UI/KkSampleInventoryPanel/KkSampleInventoryPanelView` and opens `Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Scene/KkSampleInventorySample.unity`.
-
 Use this sample as the reference for a complete business-backed UI:
 
 - Source JSON at `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel`.
@@ -180,6 +174,7 @@ Use this sample as the reference for a complete business-backed UI:
 - Runtime open path through `UIManager.Instance.OpenAsync("KkSampleInventoryPanel")`.
 
 The included Generated files are package sample artifacts. For new project work, keep project Source JSON under `Assets/UI/Source/<PackageId>` as the source of truth and do not hand-edit project Generated files.
+When creating a new UI, read the sample Source JSON first and adapt its Source-side patterns. Do not copy from the sample Generated scripts or prefab.
 
 ## References
 
@@ -188,6 +183,7 @@ The included Generated files are package sample artifacts. For new project work,
 - Read `references/examples.md` before choosing a pattern for dialogs, inventory/list panels, or layout component galleries.
 - Read `references/business-adapter.md` before connecting UI to existing gameplay/business code.
 - Read `references/uimanager-runtime.md` before explaining runtime open/close code, writing bootstrap examples, or connecting a generated prefab to scene code.
+- Read `references/issue-codes.md` before explaining Validate / Generate / Verify failures.
 
 ## MVVM-C Rules
 
