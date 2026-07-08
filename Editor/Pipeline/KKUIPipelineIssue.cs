@@ -20,6 +20,8 @@ namespace KK.UI.UMG.Editor.Pipeline
         {
             switch (code)
             {
+                case "SRC001":
+                    return "Place the Source package under Assets/ or Packages/, make the final folder name match packageId, and do not put it under a Generated folder.";
                 case "TXT001":
                     return "Move static Text copy into strings.json and reference it with layout.json locKey.";
                 case "TXT002":

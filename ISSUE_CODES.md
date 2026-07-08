@@ -2,6 +2,12 @@
 
 This page explains common Validate / Generate / Verify issues and the usual fix direction.
 
+## Source Package
+
+| Code | Meaning | Fix |
+|---|---|---|
+| `SRC001` | Source package root is outside the allowed project roots, under Generated, or the final folder name does not match `packageId`. | Put the package under `Assets/` or `Packages/`, keep the final folder name equal to `packageId`, and avoid any `Generated` folder. |
+
 ## Text And Localization
 
 | Code | Meaning | Fix |

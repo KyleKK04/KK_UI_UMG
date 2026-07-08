@@ -20,11 +20,13 @@ Generated/KkSampleInventoryPanel/KkSampleInventoryPanelController.cs
 
 The generated-owned C# output remains under `Generated/KkSampleInventoryPanel/Scripts/`.
 
-The Source files are included as reference material. In a real project, create or edit Source packages under:
+The Source files are included as reference material. In a real project, create or edit Source packages under the project's chosen Source root. The default convention is:
 
 ```text
 Assets/UI/Source/<PackageId>/
 ```
+
+Custom roots such as `Assets/_Project/UISource/<PackageId>/` are also valid when the package folder name matches `packageId`.
 
 Generated output in this sample is included so the scene can run directly from the package.
 
@@ -36,10 +38,11 @@ For new UI packages, use this sample as the primary authoring reference. Ask Cod
 Sample/InventoryPanelSample/Source/KkSampleInventoryPanel
 ```
 
-Then generate a project-owned Source package under:
+Then generate a project-owned Source package. Use the default path or your project's chosen Source root:
 
 ```text
 Assets/UI/Source/<PackageId>
+Assets/_Project/UISource/<PackageId>
 ```
 
 Do not hand-copy or hand-edit the sample `Generated/` output as a template. Generated files are quick-start artifacts and can be rebuilt from Source JSON.

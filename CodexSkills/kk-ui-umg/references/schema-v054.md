@@ -1,10 +1,10 @@
 # KK_UI_UMG Schema Reference
 
-Use this reference when creating or modifying `Assets/UI/Source/<PackageId>/`.
+Use this reference when creating or modifying a Source package. The default path is `Assets/UI/Source/<PackageId>/`, but projects may use another root under `Assets/` or `Packages/` when the final folder name matches `packageId`.
 
 ## Source Package Files
 
-Create or maintain this structure:
+Create or maintain this structure. `Assets/UI/Source/<PackageId>/` is the default convention, not the only legal location.
 
 ```text
 Assets/UI/Source/<PackageId>/
@@ -20,6 +20,20 @@ Assets/UI/Source/<PackageId>/
 ```
 
 Never create or edit `Assets/UI/Generated/<PackageId>/` directly.
+
+Custom Source roots are allowed:
+
+```text
+Assets/_Project/UISource/<PackageId>/
+Assets/Game/UI/Source/<PackageId>/
+Packages/com.example.game-ui/Source/<PackageId>/
+```
+
+Rules:
+
+- The Source package root must be under `Assets/` or `Packages/`.
+- The final folder name must match `packageId`.
+- Do not put Source packages under a `Generated` folder.
 
 `README.md` and `validation.md` are Source package documentation, not generated output.
 
@@ -221,7 +235,7 @@ Rules:
 
 - Add assets only when a real source path exists.
 - Do not fabricate image, font, sprite, material, or texture paths.
-- Source-owned assets live under `Assets/UI/Source/<PackageId>/Assets/`.
+- Source-owned assets live under `<Source Package Root>/Assets/`; the default convention is `Assets/UI/Source/<PackageId>/Assets/`.
 - Source-owned assets target `<Generated Parent>/<PackageId>/Assets/...`; default manifests still use `Assets/UI/Generated/<PackageId>/Assets/...`.
 - Shared assets must be under `sharedAssetRoots`.
 - `contentHash` is optional in the current static asset strategy. If present, verify `sha256:`. If absent, report a Warning and actual hash, but do not block generation.

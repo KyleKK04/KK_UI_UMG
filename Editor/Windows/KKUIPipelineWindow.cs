@@ -439,9 +439,9 @@ namespace KK.UI.UMG.Editor.Windows
                 return "Generated Parent must be under Assets/ or Packages/.";
             }
 
-            if (normalized.StartsWith("Assets/UI/Source", StringComparison.OrdinalIgnoreCase))
+            if (ContainsPathSegment(normalized, "Source"))
             {
-                return "Generated Parent must not be inside Assets/UI/Source.";
+                return "Generated Parent must not be inside a Source folder.";
             }
 
             if (File.Exists(normalized) && !Directory.Exists(normalized))
@@ -482,17 +482,65 @@ namespace KK.UI.UMG.Editor.Windows
 
         private static string FindFirstPackageManifestPath()
         {
-            const string sourceRoot = "Assets/UI/Source";
-            if (!Directory.Exists(sourceRoot))
+            const string defaultSourceRoot = "Assets/UI/Source";
+            var defaultManifest = FindFirstPackageManifestPathUnder(defaultSourceRoot);
+            if (!string.IsNullOrWhiteSpace(defaultManifest))
+            {
+                return defaultManifest;
+            }
+
+            return new[] { "Assets", "Packages" }
+                .Select(FindFirstPackageManifestPathUnder)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .FirstOrDefault() ?? string.Empty;
+        }
+
+        private static string FindFirstPackageManifestPathUnder(string root)
+        {
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             {
                 return string.Empty;
             }
 
             return Directory
-                .GetFiles(sourceRoot, "package.json", SearchOption.AllDirectories)
+                .GetFiles(root, "package.json", SearchOption.AllDirectories)
                 .Select(NormalizeAssetPath)
+                .Where(IsCandidateSourceManifestPath)
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .FirstOrDefault() ?? string.Empty;
+        }
+
+        private static bool IsCandidateSourceManifestPath(string path)
+        {
+            var normalized = NormalizeAssetPath(path);
+            if ((!normalized.StartsWith("Assets/", StringComparison.Ordinal) &&
+                    !normalized.StartsWith("Packages/", StringComparison.Ordinal)) ||
+                ContainsPathSegment(normalized, "Generated") ||
+                normalized.StartsWith("Packages/com.kk.ui-umg/", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            try
+            {
+                var content = File.ReadAllText(normalized);
+                return content.Contains("\"packageId\"", StringComparison.Ordinal) &&
+                    content.Contains("\"manifests\"", StringComparison.Ordinal) &&
+                    content.Contains("\"layout.json\"", StringComparison.Ordinal) &&
+                    content.Contains("\"codegen.json\"", StringComparison.Ordinal);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool ContainsPathSegment(string path, string segment)
+        {
+            return NormalizeAssetPath(path)
+                .Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .Any(part => string.Equals(part, segment, StringComparison.OrdinalIgnoreCase));
         }
 
         private void DrawResultSummary()

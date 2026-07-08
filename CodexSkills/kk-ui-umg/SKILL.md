@@ -1,13 +1,13 @@
 ---
 name: kk-ui-umg
-description: Create, modify, validate, or review KK_UI_UMG MVVM-C Unity UGUI Source packages and business service adapters. Use when Codex is asked to build UI from natural language, edit Assets/UI/Source manifests, plan bindings/events/assets/layoutComponents, connect existing business code through requiredServices adapters, review MVVM-C boundaries, or run Validate/Generate/Verify without touching Generated files.
+description: Create, modify, validate, or review KK_UI_UMG MVVM-C Unity UGUI Source packages and business service adapters. Use when Codex is asked to build UI from natural language, edit Source package manifests, plan bindings/events/assets/layoutComponents, connect existing business code through requiredServices adapters, review MVVM-C boundaries, or run Validate/Generate/Verify without touching Generated files.
 ---
 
 # KK_UI_UMG Authoring
 
 ## Overview
 
-Use this skill to work on the KK_UI_UMG MVVM-C Unity UI pipeline. Source packages live under `Assets/UI/Source/<PackageId>/`; generated C# and UGUI prefabs are rebuildable outputs and must not be hand-edited.
+Use this skill to work on the KK_UI_UMG MVVM-C Unity UI pipeline. Source packages default to `Assets/UI/Source/<PackageId>/`, but projects may choose another root under `Assets/` or `Packages/` as long as the final folder name matches `packageId`. Generated C# and UGUI prefabs are rebuildable outputs and must not be hand-edited.
 
 When a user has just imported the package and wants to create their own UI, this skill should be enough to author the Source package JSON files, explain the generated output, and explain the runtime `UIManager` setup needed to open the UI in a scene.
 
@@ -29,6 +29,7 @@ When a user has just imported the package and wants to create their own UI, this
 - Do not introduce TwoWay automatic binding.
 - Do not attach arbitrary Unity components.
 - Use only supported manifest controls and `layoutComponents`.
+- Source package roots must stay under `Assets/` or `Packages/`, the final folder name must match `packageId`, and Source must not be placed under a `Generated` folder.
 - For new UI packages, use `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` as the primary package-contained template.
 - Prefer current Source examples over copied generated output.
 - Never use sample or project Generated output as the authoring template for new Source JSON.
@@ -45,7 +46,7 @@ When a user has just imported the package and wants to create their own UI, this
 1. Extract the UI name, purpose, regions, controls, display data, list data, events, static text, dynamic text, and assets from the user request.
 2. Ask only for missing information that would change the schema or behavior. Use safe defaults for layout and naming.
 3. Read `references/schema-v054.md` and the package sample Source listed in `references/examples.md`.
-4. Create `Assets/UI/Source/<PackageId>/package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, `validation.md`, and optional `Assets/`.
+4. Create the Source package at the user's chosen Source root, defaulting to `Assets/UI/Source/<PackageId>/`, with `package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, `validation.md`, and optional `Assets/`.
 5. Use LayoutComponents first for structure, then `layoutElement`, then rect fine-tuning.
 6. Validate, Generate, Verify if possible.
 7. Ensure `README.md` describes the package and `validation.md` contains the v0.7.1 ledger markers.
@@ -173,7 +174,7 @@ Use this sample as the reference for a complete business-backed UI:
 - Demo business service under `Sample/InventoryPanelSample/Scripts/Inventory`.
 - Runtime open path through `UIManager.Instance.OpenAsync("KkSampleInventoryPanel")`.
 
-The included Generated files are package sample artifacts. For new project work, keep project Source JSON under `Assets/UI/Source/<PackageId>` as the source of truth and do not hand-edit project Generated files.
+The included Generated files are package sample artifacts. For new project work, keep project Source JSON under a project-owned Source package root such as `Assets/UI/Source/<PackageId>` or `Assets/_Project/UISource/<PackageId>` as the source of truth and do not hand-edit project Generated files.
 When creating a new UI, read the sample Source JSON first and adapt its Source-side patterns. Do not copy from the sample Generated scripts or prefab.
 
 ## References
@@ -270,6 +271,6 @@ When hardening or packaging KK_UI_UMG itself, the release object is:
 Packages/com.kk.ui-umg/
 ```
 
-Project-level `Assets/` content is consumer/example content and is not part of the pipeline package release contract. Do not use the state of `Assets/UI/Source/...`, `Assets/UI/Generated/...`, or scene bootstrap scripts as evidence that the UPM package is or is not releasable.
+Project-level `Assets/` content is consumer/example content and is not part of the pipeline package release contract. Do not use the state of project Source packages, project Generated output, or scene bootstrap scripts as evidence that the UPM package is or is not releasable.
 
 The UPM release tarball should include `Runtime/`, `Editor/`, `CodexSkills/`, `Sample/`, `README.md`, `CHANGELOG.md`, `LICENSE.md`, and `package.json`. By default, release packaging excludes package development `Tests/`; tests remain in the source repository.

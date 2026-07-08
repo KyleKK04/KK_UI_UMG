@@ -2,7 +2,7 @@
 
 These paths refer to examples in the current development project when they exist. They are authoring references, not files guaranteed to exist after installing the UPM package into a clean Unity project.
 
-For package release checks, do not treat project-level `Assets/UI/Source/...` examples as part of `Packages/com.kk.ui-umg`. Package-owned examples live under `Sample/`.
+For package release checks, do not treat project-level Source package examples as part of `Packages/com.kk.ui-umg`. Package-owned examples live under `Sample/`.
 
 The package now ships a visible sample:
 
@@ -17,6 +17,8 @@ Sample/InventoryPanelSample/Source/KkSampleInventoryPanel
 ```
 
 Do not use `Sample/InventoryPanelSample/Generated` as an authoring template.
+
+Older project examples below use the default `Assets/UI/Source/<PackageId>/` convention. Real projects may choose another Source root under `Assets/` or `Packages/` as long as the final folder name matches `packageId`.
 
 | Example | When to Read |
 |---|---|
@@ -74,7 +76,7 @@ Create a QuestPanel with a left quest list, right quest details, top search and 
 
 Expected authoring result:
 
-- Create `Assets/UI/Source/QuestPanel/`.
+- Create the Source package under the chosen Source root, for example `Assets/UI/Source/QuestPanel/`.
 - Use `VerticalList` for quests.
 - Use LayoutComponents for main panel layout.
 - Add Store fields for selected quest title, description, reward, filter state, and list items.

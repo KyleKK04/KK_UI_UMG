@@ -16,6 +16,7 @@ REQUIRED_FILES = [
 REQUIRED_TEXT = [
     "name: kk-ui-umg",
     "Assets/UI/Source/<PackageId>/",
+    "Source package roots must stay under",
     "layout.json",
     "bindings.json",
     "codegen.json",

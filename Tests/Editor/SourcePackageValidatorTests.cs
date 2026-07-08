@@ -12,35 +12,67 @@ namespace KK.UI.UMG.Editor.Tests
     public sealed class SourcePackageValidatorTests
     {
         private string _sourceRoot;
+        private readonly List<string> _sourceRoots = new List<string>();
 
         [SetUp]
         public void SetUp()
         {
+            _sourceRoots.Clear();
             _sourceRoot = Path.GetFullPath("Assets/UI/Source/SourceValidatorTest");
-            if (Directory.Exists(_sourceRoot))
-            {
-                Directory.Delete(_sourceRoot, true);
-            }
-
-            Directory.CreateDirectory(_sourceRoot);
-            File.WriteAllText(Path.Combine(_sourceRoot, "README.md"), "# SourceValidatorTest");
-            new ValidationLedgerWriter().EnsureScaffold(CreateContext());
+            PrepareSourceRoot(_sourceRoot);
         }
 
         [TearDown]
         public void TearDown()
         {
-            if (Directory.Exists(_sourceRoot))
+            foreach (var sourceRoot in _sourceRoots.Distinct())
             {
-                Directory.Delete(_sourceRoot, true);
+                if (Directory.Exists(sourceRoot))
+                {
+                    Directory.Delete(sourceRoot, true);
+                }
             }
         }
 
         [Test]
-        public void SourceRootMustMatchPackageId()
+        public void CustomAssetsSourceRootIsAllowed()
+        {
+            var customSourceRoot = Path.GetFullPath("Assets/_Project/UISource/SourceValidatorTest");
+            PrepareSourceRoot(customSourceRoot);
+            var context = CreateContext(customSourceRoot);
+
+            new SourcePackageValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "SRC001"), Is.False);
+        }
+
+        [Test]
+        public void SourceRootFolderMustMatchPackageId()
         {
             var context = CreateContext();
             context.SourceRoot = Path.GetFullPath("Assets/UI/Source/WrongPackage");
+
+            new SourcePackageValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "SRC001"), Is.True);
+        }
+
+        [Test]
+        public void SourceRootMustStayUnderAssetsOrPackages()
+        {
+            var context = CreateContext(Path.Combine(Path.GetTempPath(), "SourceValidatorTest"));
+
+            new SourcePackageValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "SRC001"), Is.True);
+        }
+
+        [Test]
+        public void SourceRootMustNotBeInsideGeneratedFolder()
+        {
+            var generatedSourceRoot = Path.GetFullPath("Assets/UI/Generated/SourceValidatorTest");
+            PrepareSourceRoot(generatedSourceRoot);
+            var context = CreateContext(generatedSourceRoot);
 
             new SourcePackageValidator().Validate(context);
 
@@ -130,12 +162,26 @@ namespace KK.UI.UMG.Editor.Tests
             Assert.That(context.Issues.Any(issue => issue.Code == "SRC007" && issue.Severity == KKUIPipelineIssueSeverity.Warning), Is.True);
         }
 
-        private KKUIPipelineContext CreateContext()
+        private void PrepareSourceRoot(string sourceRoot)
         {
+            if (Directory.Exists(sourceRoot))
+            {
+                Directory.Delete(sourceRoot, true);
+            }
+
+            Directory.CreateDirectory(sourceRoot);
+            _sourceRoots.Add(sourceRoot);
+            File.WriteAllText(Path.Combine(sourceRoot, "README.md"), "# SourceValidatorTest");
+            new ValidationLedgerWriter().EnsureScaffold(CreateContext(sourceRoot));
+        }
+
+        private KKUIPipelineContext CreateContext(string sourceRoot = null)
+        {
+            sourceRoot = sourceRoot ?? _sourceRoot;
             return new KKUIPipelineContext
             {
-                PackageManifestPath = Path.Combine(_sourceRoot, "package.json"),
-                SourceRoot = _sourceRoot,
+                PackageManifestPath = Path.Combine(sourceRoot, "package.json"),
+                SourceRoot = sourceRoot,
                 GeneratedRoot = Path.GetFullPath("Assets/UI/Generated/SourceValidatorTest"),
                 Package = new UiPackageManifest
                 {

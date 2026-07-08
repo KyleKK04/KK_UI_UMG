@@ -13,7 +13,8 @@ Use this checklist before returning work to the user.
 
 ## New Package
 
-- Create only `Assets/UI/Source/<PackageId>/` files and optional `Assets/`.
+- Create Source package files under the user's chosen Source root. Default to `Assets/UI/Source/<PackageId>/` when the project has no stronger convention.
+- Keep the Source package root under `Assets/` or `Packages/`, make the final folder name match `packageId`, and never place Source under a `Generated` folder.
 - Write `package.json`, `layout.json`, `bindings.json`, `codegen.json`, `strings.json`, `assets.json`, `README.md`, and `validation.md`.
 - Keep node ids, field ids, loc keys, and asset ids stable and unique.
 - Put static titles, button text, labels, placeholders, section headers, and fixed empty prompts in `strings.json` and reference them by `layout.json` `locKey`.

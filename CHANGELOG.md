@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.0.3
+
+- Allowed Source packages to use custom roots under `Assets/` or `Packages/`; the final Source package folder must match `packageId` and must not be under a `Generated` folder.
+- Updated `KKPipeline` manifest auto-discovery and documentation for custom Source roots such as `Assets/_Project/UISource/<PackageId>/`.
+
 ## 1.0.2
 
 - Added a first-run checklist in `KK_UI_UMG/Setting` for Codex Skill, scene UIManager, and Addressables settings.

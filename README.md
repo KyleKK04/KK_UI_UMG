@@ -3,7 +3,7 @@
 KK_UI_UMG 是一个面向 Unity UGUI 的 MVVM-C UI 生成框架。它把 UI 的源头放在可评审的 JSON Manifest 中，再生成 C# 代码和 UGUI Prefab，让 UI 可以稳定校验、生成、预览、运行和重建。
 
 ```text
-Assets/UI/Source/<PackageId>/
+Assets/UI/Source/<PackageId>/          # default Source package path
   -> Validate
   -> Generate C# + UGUI Prefab
   -> Verify
@@ -50,7 +50,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 普通用户推荐使用 GitHub Release 中的 tarball。tarball 是正式交付包，不包含 package 开发用 `Tests/`。
 
 ```text
-com.kk.ui-umg-1.0.2.tgz
+com.kk.ui-umg-1.0.3.tgz
 ```
 
 在 Unity Package Manager 中选择：
@@ -58,7 +58,7 @@ com.kk.ui-umg-1.0.2.tgz
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.2.tgz
+  -> com.kk.ui-umg-1.0.3.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -66,7 +66,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.2.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.3.tgz"
   }
 }
 ```
@@ -76,7 +76,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.2"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.3"
   }
 }
 ```
@@ -125,11 +125,20 @@ Git URL 更适合希望跟随源码、调试 package 或查看测试代码的开
    KK_UI_UMG/KKPipeline
    ```
 
-5. 创建或选择 Source package：
+5. 创建或选择 Source package。默认推荐路径是：
 
    ```text
    Assets/UI/Source/<PackageId>/package.json
    ```
+
+   项目也可以使用自定义 Source 根，例如：
+
+   ```text
+   Assets/_Project/UISource/<PackageId>/package.json
+   Assets/Game/UI/Source/<PackageId>/package.json
+   ```
+
+   Source package 必须在 `Assets/` 或 `Packages/` 下，最后一级文件夹名必须等于 `packageId`，并且不能放在 `Generated` 文件夹下。
 
 6. 在 `Generated Parent Folder` 选择生成父目录。默认是：
 
@@ -168,15 +177,15 @@ Packages/com.kk.ui-umg/Sample/InventoryPanelSample/
 
 它展示完整链路：Source JSON、静态 `locKey`、动态 Store 字段、Generated Prefab、Addressables、`UIManager.OpenAsync`、手写 Controller partial、业务 `IInventoryService` 注册和运行时数据更新。
 
-样例中的 Source / Generated / Scene / Scripts 都在 package 内，方便随 package 一起交付。真实项目中仍以 `Assets/UI/Source/<PackageId>/` 为源头，通过 `KK_UI_UMG/KKPipeline` 重新生成项目自己的 UI。
+样例中的 Source / Generated / Scene / Scripts 都在 package 内，方便随 package 一起交付。真实项目中仍以项目自己的 Source package 为源头，通过 `KK_UI_UMG/KKPipeline` 重新生成项目自己的 UI。
 
-新 UI 推荐把 sample 当作 AI authoring 模板：让 Codex 参考 `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` 的 Source JSON 结构，生成你项目中的 `Assets/UI/Source/<PackageId>/`。不要把 sample 的 Generated 输出当作手写模板。
+新 UI 推荐把 sample 当作 AI authoring 模板：让 Codex 参考 `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` 的 Source JSON 结构，生成你项目中的 Source package，例如 `Assets/UI/Source/<PackageId>/` 或 `Assets/_Project/UISource/<PackageId>/`。不要把 sample 的 Generated 输出当作手写模板。
 
 ## 项目亮点
 
 ### Manifest 是唯一源头
 
-每个 UI Source package 使用固定结构：
+每个 UI Source package 使用固定文件结构。默认路径是：
 
 ```text
 Assets/UI/Source/<PackageId>/
@@ -190,6 +199,8 @@ Assets/UI/Source/<PackageId>/
 ├─ validation.md
 └─ Assets/
 ```
+
+也可以放在项目自定义 Source 根下，例如 `Assets/_Project/UISource/<PackageId>/`。合法规则是：Source package root 在 `Assets/` 或 `Packages/` 下，最后一级文件夹名等于 `packageId`，且不在 `Generated` 文件夹下。
 
 `Generated/` 下的 C# 和 Prefab 可以删除后重建。如果生成结果不对，应该修改 Source JSON 或 generator，而不是手改生成物。
 
@@ -223,7 +234,7 @@ UGUI event
 ### Source / Generated / Handwritten 分离
 
 ```text
-Assets/UI/Source/<PackageId>/          # 人和 AI 维护的源头
+<Source Package Root>/                 # 人和 AI 维护的源头，默认 Assets/UI/Source/<PackageId>/
 <Generated Parent>/<PackageId>/Scripts # 生成 C#
 <Generated Parent>/<PackageId>/Prefabs # 生成 Prefab
 <Generated Parent>/<PackageId>/Reports # 生成报告

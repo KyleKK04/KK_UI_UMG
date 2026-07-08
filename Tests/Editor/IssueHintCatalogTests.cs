@@ -8,6 +8,7 @@ namespace KK.UI.UMG.Editor.Tests
         [Test]
         public void CommonIssueCodesHaveFixHints()
         {
+            Assert.That(IssueHintCatalog.GetHint("SRC001"), Does.Contain("Source package"));
             Assert.That(IssueHintCatalog.GetHint("TXT003"), Does.Contain("dynamic text binding"));
             Assert.That(IssueHintCatalog.GetHint("GEN006"), Does.Contain("UI/<PackageId>/<PackageId>View"));
             Assert.That(IssueHintCatalog.GetHint("GENPENDING"), Does.Contain("compilation"));

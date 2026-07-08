@@ -4,6 +4,7 @@ Use this reference when explaining Validate / Generate / Verify failures.
 
 | Code | Fix Direction |
 |---|---|
+| `SRC001` | Put the Source package under `Assets/` or `Packages/`, make the final folder name match `packageId`, and do not put it under a `Generated` folder. |
 | `TXT001` | Move static Text copy to `strings.json` and reference it with `layout.json` `locKey`. |
 | `TXT002` | Add the missing `locKey` to the `defaultCulture` table in `strings.json`. |
 | `TXT003` | A Text node cannot use both `locKey` and dynamic `text` binding; choose one path. |

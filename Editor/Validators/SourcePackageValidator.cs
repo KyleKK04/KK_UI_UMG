@@ -43,10 +43,21 @@ namespace KK.UI.UMG.Editor.Validators
             }
 
             var sourceRoot = AssetManifestUtility.NormalizeAssetPath(AssetManifestUtility.ToAssetPath(context.SourceRoot));
-            var expected = $"Assets/UI/Source/{context.Package.PackageId}";
-            if (!string.Equals(sourceRoot, expected, StringComparison.OrdinalIgnoreCase))
+            if (!IsUnityAssetPath(sourceRoot))
             {
-                context.Add(KKUIPipelineIssueSeverity.Error, "SRC001", $"Source package root must be '{expected}', got '{sourceRoot}'.");
+                context.Add(KKUIPipelineIssueSeverity.Error, "SRC001", $"Source package root must be under Assets/ or Packages/, got '{sourceRoot}'.");
+                return;
+            }
+
+            if (ContainsPathSegment(sourceRoot, "Generated"))
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "SRC001", $"Source package root must not be inside a Generated folder: '{sourceRoot}'.");
+            }
+
+            var folderName = Path.GetFileName(sourceRoot.TrimEnd('/'));
+            if (!string.Equals(folderName, context.Package.PackageId, StringComparison.Ordinal))
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "SRC001", $"Source package root folder must match packageId '{context.Package.PackageId}', got '{folderName}'.");
             }
         }
 
@@ -186,6 +197,19 @@ namespace KK.UI.UMG.Editor.Validators
             return string.Equals(normalizedPath, normalizedDirectory, StringComparison.OrdinalIgnoreCase) ||
                 normalizedPath.StartsWith(normalizedDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
                 normalizedPath.StartsWith(normalizedDirectory + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUnityAssetPath(string assetPath)
+        {
+            return assetPath.StartsWith("Assets/", StringComparison.Ordinal) ||
+                assetPath.StartsWith("Packages/", StringComparison.Ordinal);
+        }
+
+        private static bool ContainsPathSegment(string assetPath, string segment)
+        {
+            return assetPath
+                .Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .Any(part => string.Equals(part, segment, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
