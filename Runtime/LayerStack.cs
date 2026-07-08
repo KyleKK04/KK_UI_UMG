@@ -8,6 +8,8 @@ namespace KK.UI.UMG
     {
         private readonly Stack<string> _stack = new Stack<string>();
         private readonly Dictionary<string, UIViewBase> _views = new Dictionary<string, UIViewBase>();
+        private readonly List<string> _cachedStack = new List<string>();
+        private bool _stackDirty = true;
 
         public float DimAlpha { get; set; } = 1f;
 
@@ -29,9 +31,16 @@ namespace KK.UI.UMG
         {
             get
             {
-                var items = _stack.ToArray();
-                Array.Reverse(items);
-                return items;
+                if (_stackDirty)
+                {
+                    _cachedStack.Clear();
+                    var items = _stack.ToArray();
+                    Array.Reverse(items);
+                    _cachedStack.AddRange(items);
+                    _stackDirty = false;
+                }
+
+                return _cachedStack;
             }
         }
 
@@ -56,6 +65,7 @@ namespace KK.UI.UMG
 
             _stack.Push(systemId);
             _views[systemId] = view;
+            _stackDirty = true;
             view.SetInteraction(true, true);
             view.SetAlpha(1f);
         }
@@ -76,6 +86,7 @@ namespace KK.UI.UMG
 
             _stack.Pop();
             _views.Remove(systemId);
+            _stackDirty = true;
 
             if (_stack.Count == 0)
             {

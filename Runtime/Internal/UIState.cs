@@ -5,6 +5,7 @@ namespace KK.UI.UMG.Internal
         Unloaded,
         Loading,
         Open,
+        Hidden,
         Closing
     }
 }

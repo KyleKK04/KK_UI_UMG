@@ -19,6 +19,7 @@ namespace KK.UI.UMG
     {
         private readonly Dictionary<string, object> _fields = new Dictionary<string, object>();
         private readonly HashSet<string> _dirty = new HashSet<string>();
+        private readonly List<ViewModelDirtyField> _dirtyBuffer = new List<ViewModelDirtyField>();
         private bool _disposed;
 
         public void Update<T>(string fieldId, T value)
@@ -60,15 +61,15 @@ namespace KK.UI.UMG
         public IReadOnlyList<ViewModelDirtyField> TakeDirty()
         {
             ThrowIfDisposed();
-            var result = new List<ViewModelDirtyField>(_dirty.Count);
+            _dirtyBuffer.Clear();
             foreach (var fieldId in _dirty)
             {
                 _fields.TryGetValue(fieldId, out var value);
-                result.Add(new ViewModelDirtyField(fieldId, value));
+                _dirtyBuffer.Add(new ViewModelDirtyField(fieldId, value));
             }
 
             _dirty.Clear();
-            return result;
+            return _dirtyBuffer;
         }
 
         public void Clear()
@@ -76,6 +77,7 @@ namespace KK.UI.UMG
             ThrowIfDisposed();
             _fields.Clear();
             _dirty.Clear();
+            _dirtyBuffer.Clear();
         }
 
         public void Dispose()
@@ -87,6 +89,7 @@ namespace KK.UI.UMG
 
             _fields.Clear();
             _dirty.Clear();
+            _dirtyBuffer.Clear();
             _disposed = true;
         }
 

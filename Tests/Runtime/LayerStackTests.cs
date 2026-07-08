@@ -79,6 +79,34 @@ namespace KK.UI.UMG.Tests
             }
         }
 
+        [Test]
+        public void StackSnapshotIsReusedUntilStackChanges()
+        {
+            var first = CreateView("first");
+            var second = CreateView("second");
+            try
+            {
+                var stack = new LayerStack();
+                stack.Push("first", first);
+
+                var firstSnapshot = stack.Stack;
+                var secondSnapshot = stack.Stack;
+
+                Assert.That(ReferenceEquals(firstSnapshot, secondSnapshot), Is.True);
+
+                stack.Push("second", second);
+                var changedSnapshot = stack.Stack;
+
+                Assert.That(ReferenceEquals(firstSnapshot, changedSnapshot), Is.True);
+                Assert.That(changedSnapshot, Is.EqualTo(new[] { "first", "second" }));
+            }
+            finally
+            {
+                Object.DestroyImmediate(first.gameObject);
+                Object.DestroyImmediate(second.gameObject);
+            }
+        }
+
         private static TestView CreateView(string name)
         {
             var gameObject = new GameObject(name);

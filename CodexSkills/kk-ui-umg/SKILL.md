@@ -37,6 +37,8 @@ When a user has just imported the package and wants to create their own UI, this
 - Keep View, Store, Binder, Controller, UIManager responsibilities separated.
 - Runtime opening requires a scene GameObject with the `KK.UI.UMG.UIManager` component attached.
 - After creating or modifying a UI, explain the `UIManager` interface needed to open the generated prefab at runtime.
+- For frequently toggled UI such as inventory, pause, map, settings, or HUD panels, recommend `PreloadAsync` plus `HideAsync` / `ShowAsync` instead of repeatedly destroying and reopening the panel.
+- Store writes continue to use generic `Store.Update<T>`; do not invent `UpdateInt` / `UpdateFloat` / `UpdateBool` APIs.
 - Run Validate / Generate / Verify when Unity Editor access is available; otherwise tell the user exactly what remains to run.
 
 ## Workflow
@@ -88,6 +90,7 @@ For a newly imported package, explain this runtime setup whenever the user asks 
 5. Run `Validate`, `Generate`, and `Verify` from `KK_UI_UMG/KKPipeline`.
 6. Open generated UI with `await UIManager.Instance.OpenAsync("<PackageId>");`.
 7. Close generated UI with `await UIManager.Instance.CloseAsync("<PackageId>");`.
+8. For high-frequency panels, preload once and toggle visibility with `HideAsync` / `ShowAsync`.
 
 `UIManager` owns runtime UI lifecycle:
 
@@ -95,8 +98,11 @@ For a newly imported package, explain this runtime setup whenever the user asks 
 - Instantiates the prefab under the UI root.
 - Creates one Controller instance per open UI lifecycle through generated Controller factory registration.
 - Calls Controller lifecycle in order: `BindView`, `OnPreOpen`, `Initialize`, `Flush`, `OnOpened`, `OnActivated`.
-- Maintains open state, active views, active controllers, Addressables handles, and top-first layer stack.
-- Releases Addressables handles and disposes the Controller on close.
+- Maintains open / hidden state, active and hidden panel instances, Addressables handles, and top-first layer stack.
+- Preloads generated prefab assets through `PreloadAsync`.
+- Hides high-frequency panels through `HideAsync` without disposing Controller, destroying View, clearing Store, or releasing Addressables.
+- Shows hidden panels through `ShowAsync` without re-instantiating, rebinding, or reinitializing.
+- Releases Addressables handles and disposes the Controller on `CloseAsync` / `ReleaseAsync`.
 - Provides `IsOpen`, `GetState`, `GetTopLayer`, and `GetLayerStack`.
 - Provides service registration for business adapters: `RegisterService<T>`, `TryGetService<T>`, `UnregisterService<T>`, and `ClearServices`.
 - Subscribes generated MessageBus routes so configured bus messages can open or close UI through `UIManager`.
@@ -114,8 +120,13 @@ public sealed class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; }
 
+    public Task PreloadAsync(string systemId);
     public Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null);
+    public Task<UIViewBase> ShowAsync(string systemId, MessagePayload payload = null);
+    public Task HideAsync(string systemId);
     public Task CloseAsync(string systemId);
+    public Task CloseAsync(string systemId, UICloseMode mode);
+    public Task ReleaseAsync(string systemId);
 
     public bool IsOpen(string systemId);
     public UIState GetState(string systemId);
@@ -152,9 +163,19 @@ payload.Set("itemId", "sword_001");
 await UIManager.Instance.OpenAsync("ItemDetailPanel", payload);
 ```
 
+High-frequency panel example:
+
+```csharp
+await UIManager.Instance.PreloadAsync("InventoryPanel");
+await UIManager.Instance.OpenAsync("InventoryPanel");
+await UIManager.Instance.HideAsync("InventoryPanel");
+await UIManager.Instance.ShowAsync("InventoryPanel");
+await UIManager.Instance.ReleaseAsync("InventoryPanel");
+```
+
 Generated prefabs are not normally opened by dragging them into the scene. The runtime path is `UIManager.OpenAsync(systemId)`, where `systemId` is the Source `packageId` and the Addressables key is `UI/<PackageId>/<PackageId>View`.
 
-Generated runtime code registers Controller factories during load. Do not put Controller components on the prefab and do not make Controller singletons. The prefab carries the generated View; `UIManager` creates the Controller for each Open and destroys it on Close.
+Generated runtime code registers Controller factories during load. Do not put Controller components on the prefab and do not make Controller singletons. The prefab carries the generated View; `UIManager` creates the Controller for each first Open and destroys it on Close / Release. Hide / Show keeps the existing View, Controller, and Store alive.
 
 When a UI declares `codegen.requiredServices`, the scene must register those services on `UIManager` before opening that UI. Business adapters should register in `Start` and unregister in `OnDestroy` or an equivalent lifecycle that does not depend on `Awake` / `OnEnable` ordering across GameObjects.
 

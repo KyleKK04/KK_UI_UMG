@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.0.4
+
+- Added runtime preload and panel cache APIs: `PreloadAsync`, `HideAsync`, `ShowAsync`, `ReleaseAsync`, and `CloseAsync(systemId, UICloseMode.Hide)`.
+- Refactored `UIManager` runtime responsibilities into loader, service registry, bus router, layer manager, and panel cache collaborators while preserving existing `OpenAsync` / `CloseAsync` usage.
+- Added low-GC runtime cleanup: layer stack snapshot caching, shared UGUI apply helper, `UIListView` item pooling, and `ViewModelStore.TakeDirty` buffer reuse while keeping generic `Store.Update<T>` as the Store update API.
+
 ## 1.0.3
 
 - Allowed Source packages to use custom roots under `Assets/` or `Packages/`; the final Source package folder must match `packageId` and must not be under a `Generated` folder.

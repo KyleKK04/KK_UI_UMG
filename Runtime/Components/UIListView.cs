@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using KK.UI.UMG;
+using KK.UI.UMG.Binding;
 
 namespace KK.UI.UMG.Components
 {
@@ -32,11 +33,17 @@ namespace KK.UI.UMG.Components
         [SerializeField] private List<ItemEvent> _itemEvents = new List<ItemEvent>();
 
         private readonly List<GameObject> _instances = new List<GameObject>();
+        private readonly Dictionary<GameObject, Dictionary<string, Transform>> _lookupCache = new Dictionary<GameObject, Dictionary<string, Transform>>();
+        private UIObjectPool _pool;
+        private Transform _poolRoot;
 
         public event Action<int, string> ItemClicked;
 
         public void Configure(RectTransform content, GameObject itemTemplate, IReadOnlyList<ItemBinding> itemBindings, IReadOnlyList<ItemEvent> itemEvents)
         {
+            ReleaseActiveItems();
+            DestroyPool();
+
             _content = content;
             _itemTemplate = itemTemplate;
             _itemBindings = itemBindings == null ? new List<ItemBinding>() : new List<ItemBinding>(itemBindings);
@@ -50,20 +57,21 @@ namespace KK.UI.UMG.Components
 
         public void SetItems(IReadOnlyList<MessagePayload> items)
         {
-            Clear();
+            ReleaseActiveItems();
             if (_content == null || _itemTemplate == null || items == null)
             {
                 return;
             }
 
             NormalizeContentRect();
+            EnsurePool();
             for (var i = 0; i < items.Count; i++)
             {
                 var payload = items[i];
-                var item = Instantiate(_itemTemplate, _content, false);
+                var item = _pool.Get(_content);
                 item.name = $"{_itemTemplate.name}_{i}";
                 NormalizeItemRect(item);
-                item.SetActive(true);
+                ResetItem(item.transform);
                 ApplyBindings(item.transform, payload);
                 BindItemEvents(item.transform, payload, i);
                 _instances.Add(item);
@@ -74,6 +82,18 @@ namespace KK.UI.UMG.Components
 
         public void Clear()
         {
+            ReleaseActiveItems();
+        }
+
+        private void OnDestroy()
+        {
+            ReleaseActiveItems();
+            DestroyPool();
+        }
+
+        private void ReleaseActiveItems()
+        {
+            EnsurePool();
             foreach (var instance in _instances)
             {
                 if (instance == null)
@@ -81,17 +101,93 @@ namespace KK.UI.UMG.Components
                     continue;
                 }
 
-                if (Application.isPlaying)
+                if (_pool == null)
                 {
-                    Destroy(instance);
+                    DestroyInstance(instance);
+                    continue;
                 }
-                else
-                {
-                    DestroyImmediate(instance);
-                }
+
+                _pool.Release(instance);
             }
 
             _instances.Clear();
+        }
+
+        private void EnsurePool()
+        {
+            if (_pool != null || _itemTemplate == null)
+            {
+                return;
+            }
+
+            if (_poolRoot == null)
+            {
+                var poolObject = new GameObject($"{name}_PooledItems", typeof(RectTransform));
+                poolObject.transform.SetParent(transform, false);
+                poolObject.SetActive(false);
+                _poolRoot = poolObject.transform;
+            }
+
+            _pool = new UIObjectPool(_itemTemplate, _poolRoot);
+        }
+
+        private void DestroyPool()
+        {
+            _pool?.DestroyAll();
+            _pool = null;
+            _lookupCache.Clear();
+
+            if (_poolRoot == null)
+            {
+                return;
+            }
+
+            var poolObject = _poolRoot.gameObject;
+            _poolRoot = null;
+            if (Application.isPlaying)
+            {
+                Destroy(poolObject);
+            }
+            else
+            {
+                DestroyImmediate(poolObject);
+            }
+        }
+
+        private static void DestroyInstance(GameObject instance)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(instance);
+            }
+            else
+            {
+                DestroyImmediate(instance);
+            }
+        }
+
+        private void ResetItem(Transform itemRoot)
+        {
+            foreach (var button in itemRoot.GetComponentsInChildren<Button>(true))
+            {
+                button.onClick.RemoveAllListeners();
+            }
+
+            foreach (var binding in _itemBindings)
+            {
+                if (binding == null || string.IsNullOrWhiteSpace(binding.ControlId))
+                {
+                    continue;
+                }
+
+                var target = FindByName(itemRoot, binding.ControlId);
+                if (target == null)
+                {
+                    continue;
+                }
+
+                UguiApplyHelper.TryApply(target, binding.Property, GetDefaultValue(binding.Property));
+            }
         }
 
         private void ApplyBindings(Transform itemRoot, MessagePayload payload)
@@ -114,7 +210,7 @@ namespace KK.UI.UMG.Components
                     continue;
                 }
 
-                Apply(target, binding.Property, value);
+                UguiApplyHelper.TryApply(target, binding.Property, value);
             }
         }
 
@@ -187,33 +283,30 @@ namespace KK.UI.UMG.Components
             }
         }
 
-        private static void Apply(Transform target, string property, object value)
+        private Transform FindByName(Transform root, string name)
         {
-            if (target.TryGetComponent<TMP_Text>(out var text) && property == "text")
+            if (root == null)
             {
-                text.text = value?.ToString() ?? string.Empty;
-                return;
+                return null;
             }
 
-            if (target.TryGetComponent<Image>(out var image) && property == "sprite")
+            if (!_lookupCache.TryGetValue(root.gameObject, out var cache))
             {
-                image.sprite = value as Sprite;
-                return;
+                cache = new Dictionary<string, Transform>();
+                _lookupCache[root.gameObject] = cache;
             }
 
-            if (target.TryGetComponent<RawImage>(out var rawImage) && property == "texture")
+            if (cache.TryGetValue(name, out var cached) && cached != null)
             {
-                rawImage.texture = value as Texture;
-                return;
+                return cached;
             }
 
-            if (target.TryGetComponent<Button>(out var button) && property == "interactable")
-            {
-                button.interactable = value is bool enabled && enabled;
-            }
+            var found = FindByNameRecursive(root, name);
+            cache[name] = found;
+            return found;
         }
 
-        private static Transform FindByName(Transform root, string name)
+        private static Transform FindByNameRecursive(Transform root, string name)
         {
             if (root.name == name)
             {
@@ -222,11 +315,38 @@ namespace KK.UI.UMG.Components
 
             foreach (Transform child in root)
             {
-                var found = FindByName(child, name);
+                var found = FindByNameRecursive(child, name);
                 if (found != null)
                 {
                     return found;
                 }
+            }
+
+            return null;
+        }
+
+        private static object GetDefaultValue(string property)
+        {
+            if (string.Equals(property, "text", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+
+            if (string.Equals(property, "sprite", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "texture", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (string.Equals(property, "interactable", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "isOn", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.Equals(property, "value", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0f;
             }
 
             return null;

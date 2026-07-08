@@ -113,6 +113,71 @@ namespace KK.UI.UMG.Tests
             }
         }
 
+        [Test]
+        public void SetItemsReusesItemsAndOverwritesOldState()
+        {
+            var root = new GameObject("list");
+            try
+            {
+                var listView = root.AddComponent<UIListView>();
+                var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+                content.SetParent(root.transform, false);
+                var template = CreateTemplate(content);
+                listView.Configure(
+                    content,
+                    template,
+                    new[]
+                    {
+                        new UIListView.ItemBinding
+                        {
+                            ControlId = "Label",
+                            ItemField = "name",
+                            Property = "text"
+                        }
+                    },
+                    new[]
+                    {
+                        new UIListView.ItemEvent
+                        {
+                            ControlId = "ClickButton",
+                            Event = "onItemClick",
+                            ItemIdField = "id"
+                        }
+                    });
+
+                var first = CreatePayload("item-1", "Item One");
+                var second = CreatePayload("item-2", "Item Two");
+                listView.SetItems(new List<MessagePayload> { first, second });
+                var firstInstance = content.GetChild(1).gameObject;
+                var secondInstance = content.GetChild(2).gameObject;
+
+                var clickedCount = 0;
+                var clickedId = string.Empty;
+                listView.ItemClicked += (index, itemId) =>
+                {
+                    clickedCount++;
+                    clickedId = itemId;
+                };
+
+                var third = CreatePayload("item-3", "Item Three");
+                listView.SetItems(new List<MessagePayload> { third });
+                var reusedInstance = content.GetChild(1).gameObject;
+
+                Assert.That(reusedInstance == firstInstance || reusedInstance == secondInstance, Is.True);
+                Assert.That(content.childCount, Is.EqualTo(2));
+                Assert.That(content.GetChild(1).GetComponentInChildren<TextMeshProUGUI>().text, Is.EqualTo("Item Three"));
+
+                content.GetChild(1).Find("ClickButton").GetComponent<Button>().onClick.Invoke();
+
+                Assert.That(clickedCount, Is.EqualTo(1));
+                Assert.That(clickedId, Is.EqualTo("item-3"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         private static GameObject CreateTemplate(Transform content)
         {
             var template = new GameObject("ItemTemplate", typeof(RectTransform));
@@ -125,6 +190,14 @@ namespace KK.UI.UMG.Tests
             button.AddComponent<Button>();
             template.SetActive(false);
             return template;
+        }
+
+        private static MessagePayload CreatePayload(string id, string name)
+        {
+            var payload = new MessagePayload();
+            payload.Set("id", id);
+            payload.Set("name", name);
+            return payload;
         }
     }
 }

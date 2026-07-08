@@ -50,7 +50,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 普通用户推荐使用 GitHub Release 中的 tarball。tarball 是正式交付包，不包含 package 开发用 `Tests/`。
 
 ```text
-com.kk.ui-umg-1.0.3.tgz
+com.kk.ui-umg-1.0.4.tgz
 ```
 
 在 Unity Package Manager 中选择：
@@ -58,7 +58,7 @@ com.kk.ui-umg-1.0.3.tgz
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.3.tgz
+  -> com.kk.ui-umg-1.0.4.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -66,7 +66,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.3.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.4.tgz"
   }
 }
 ```
@@ -76,7 +76,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.3"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.4"
   }
 }
 ```
@@ -167,6 +167,16 @@ Git URL 更适合希望跟随源码、调试 package 或查看测试代码的开
    await UIManager.Instance.OpenAsync("<PackageId>");
    ```
 
+   高频 UI，例如背包、暂停菜单、地图、设置或 HUD，可以提前预加载并隐藏/显示复用，避免每次关闭后重新加载和实例化：
+
+   ```csharp
+   await UIManager.Instance.PreloadAsync("<PackageId>");
+   await UIManager.Instance.OpenAsync("<PackageId>");
+   await UIManager.Instance.HideAsync("<PackageId>");
+   await UIManager.Instance.ShowAsync("<PackageId>");
+   await UIManager.Instance.ReleaseAsync("<PackageId>");
+   ```
+
 ### 示例：Inventory Panel Sample
 
 Package 内置一个可直接打开的样例：
@@ -223,7 +233,9 @@ UGUI event
 - Controller 是 UI 业务入口，只由它写 Store。
 - ViewModelStore 是显示状态来源。
 - Binder 只把 Store 写回 UGUI。
-- UIManager 负责加载、打开、关闭、释放和生命周期。
+- UIManager 负责预加载、打开、隐藏、显示、关闭、释放和生命周期。
+
+高频 UI 可以通过 `HideAsync` 保留 View / Controller / Store，再通过 `ShowAsync` 恢复显示；`CloseAsync` / `ReleaseAsync` 才是真正释放 Controller、销毁 View、释放 Addressables 的路径。Store 写入仍然使用泛型 `Store.Update<T>`，没有强类型 Update 快路径。
 
 ### 静态文本和动态文本分流
 

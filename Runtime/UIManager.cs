@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.EventSystems;
-using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.UI;
 using KK.UI.UMG.Internal;
 using KK.UI.UMG.Localization;
@@ -17,18 +15,19 @@ namespace KK.UI.UMG
         public static UIManager Instance { get; private set; }
 
         private readonly Dictionary<string, UIState> _states = new Dictionary<string, UIState>();
-        private readonly Dictionary<string, UIViewBase> _activeViews = new Dictionary<string, UIViewBase>();
-        private readonly Dictionary<string, UIControllerBase> _activeControllers = new Dictionary<string, UIControllerBase>();
-        private readonly Dictionary<string, AsyncOperationHandle<GameObject>> _handles = new Dictionary<string, AsyncOperationHandle<GameObject>>();
+        private readonly Dictionary<string, Task<UIViewBase>> _openingTasks = new Dictionary<string, Task<UIViewBase>>();
+        private readonly Dictionary<string, Task> _closingTasks = new Dictionary<string, Task>();
         private readonly HashSet<string> _pendingClose = new HashSet<string>();
-        private readonly LayerStack _layerStack = new LayerStack();
         private readonly Dictionary<string, Func<UIControllerBase>> _controllerFactories = new Dictionary<string, Func<UIControllerBase>>();
         private readonly List<UIBusRoute> _busRoutes = new List<UIBusRoute>();
-        private readonly List<IDisposable> _busSubscriptions = new List<IDisposable>();
-        private readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();
+        private readonly AddressablesUILoader _loader = new AddressablesUILoader(GetAddressablesKey);
+        private readonly UIPanelCache _panels = new UIPanelCache();
+        private readonly UILayerManager _layers = new UILayerManager();
+        private readonly UIServiceRegistry _services = new UIServiceRegistry();
+
         [SerializeField] private string _startupCulture = "zh-Hans";
-        private int _nextSortingOrder;
         private RectTransform _uiRoot;
+        private UIBusRouter _busRouter;
 
         private void Awake()
         {
@@ -42,18 +41,16 @@ namespace KK.UI.UMG
             UILocalizationService.Instance.SetStartupCulture(_startupCulture);
             ControllerFactoryRegistry.CopyTo(_controllerFactories);
             UIBusRouteRegistry.CopyTo(_busRoutes);
-            SubscribeBusRoutes();
+            _busRouter = new UIBusRouter(OpenAsync, CloseAsync);
+            _busRouter.Subscribe(_busRoutes);
             GetOrCreateUiRoot();
         }
 
         private void OnDestroy()
         {
-            foreach (var subscription in _busSubscriptions)
-            {
-                subscription.Dispose();
-            }
-
-            _busSubscriptions.Clear();
+            _busRouter?.Dispose();
+            _panels.DestroyAll();
+            _loader.ReleaseAll();
             ClearServices();
             if (Instance == this)
             {
@@ -61,88 +58,249 @@ namespace KK.UI.UMG
             }
         }
 
-        public async Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null)
+        public Task PreloadAsync(string systemId)
         {
-            if (IsOpen(systemId))
+            if (IsOpen(systemId) || GetState(systemId) == UIState.Hidden)
             {
-                return _activeViews[systemId];
+                return Task.CompletedTask;
             }
 
-            var state = GetState(systemId);
-            if (state == UIState.Loading || state == UIState.Closing)
-            {
-                while (GetState(systemId) == UIState.Loading || GetState(systemId) == UIState.Closing)
-                {
-                    await Task.Yield();
-                }
+            return _loader.PreloadAsync(systemId);
+        }
 
-                return IsOpen(systemId) ? _activeViews[systemId] : null;
+        public Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null)
+        {
+            if (_panels.TryGetActive(systemId, out var active))
+            {
+                return Task.FromResult(active.View);
             }
 
-            _states[systemId] = UIState.Loading;
-            var handle = Addressables.LoadAssetAsync<GameObject>(GetAddressablesKey(systemId));
-            _handles[systemId] = handle;
-
-            await handle.Task;
-            if (handle.Status != AsyncOperationStatus.Succeeded)
+            if (_panels.TryGetHidden(systemId, out _))
             {
-                var operationException = handle.OperationException;
+                return ShowAsync(systemId, payload);
+            }
+
+            if (_openingTasks.TryGetValue(systemId, out var openingTask))
+            {
+                return openingTask;
+            }
+
+            if (_closingTasks.TryGetValue(systemId, out var closingTask))
+            {
+                return OpenAfterCloseAsync(systemId, payload, closingTask);
+            }
+
+            var task = OpenCoreAsync(systemId, payload);
+            _openingTasks[systemId] = task;
+            return task;
+        }
+
+        public async Task<UIViewBase> ShowAsync(string systemId, MessagePayload payload = null)
+        {
+            if (_panels.TryGetActive(systemId, out var active))
+            {
+                return active.View;
+            }
+
+            if (_closingTasks.TryGetValue(systemId, out var closingTask))
+            {
+                await closingTask;
+            }
+
+            if (!_panels.MoveHiddenToActive(systemId, out var panel))
+            {
+                return await OpenAsync(systemId, payload);
+            }
+
+            var previousTop = _layers.Top;
+            _layers.AssignSortingOrder(panel.Root);
+            panel.Root.SetActive(true);
+            _layers.Push(systemId, panel.View);
+            if (previousTop.view != null && _panels.TryGetActive(previousTop.systemId, out var previousPanel))
+            {
+                previousPanel.Controller.OnDeactivated();
+            }
+
+            panel.Controller.OnShown(payload);
+            panel.Controller.OnActivated();
+            _states[systemId] = UIState.Open;
+            return panel.View;
+        }
+
+        public async Task HideAsync(string systemId)
+        {
+            if (_openingTasks.TryGetValue(systemId, out var openingTask))
+            {
+                await openingTask;
+            }
+
+            if (GetState(systemId) != UIState.Open)
+            {
+                return;
+            }
+
+            var top = _layers.Top;
+            if (top.systemId != systemId)
+            {
+                Debug.LogWarning($"[UIManager] HideAsync('{systemId}') ignored: not top layer. Hide top-first.");
+                return;
+            }
+
+            if (!_panels.MoveActiveToHidden(systemId, out var panel))
+            {
                 _states[systemId] = UIState.Unloaded;
-                Addressables.Release(handle);
-                _handles.Remove(systemId);
-                throw operationException;
+                return;
             }
 
-            var instance = Instantiate(handle.Result, GetOrCreateUiRoot());
-            instance.SetActive(false);
-            AssignSortingOrder(instance);
-            var view = instance.GetComponent<UIViewBase>();
-            if (view == null)
+            panel.Controller.OnDeactivated();
+            _layers.Pop(systemId);
+            ActivateTopController();
+            panel.Root.SetActive(false);
+            panel.Controller.OnHidden();
+            _states[systemId] = UIState.Hidden;
+        }
+
+        public Task CloseAsync(string systemId)
+        {
+            return CloseAsync(systemId, UICloseMode.Destroy);
+        }
+
+        public async Task CloseAsync(string systemId, UICloseMode mode)
+        {
+            if (mode == UICloseMode.Hide)
             {
-                Destroy(instance);
-                _states[systemId] = UIState.Unloaded;
-                Addressables.Release(handle);
-                _handles.Remove(systemId);
-                throw new MissingComponentException($"UI prefab '{systemId}' must have UIViewBase.");
+                await HideAsync(systemId);
+                return;
             }
 
-            UIControllerBase controller;
+            if (GetState(systemId) == UIState.Loading)
+            {
+                _pendingClose.Add(systemId);
+                return;
+            }
+
+            if (_closingTasks.TryGetValue(systemId, out var closingTask))
+            {
+                await closingTask;
+                return;
+            }
+
+            var task = CloseCoreAsync(systemId);
+            _closingTasks[systemId] = task;
             try
             {
-                controller = CreateController(systemId);
+                await task;
             }
-            catch
+            finally
             {
-                Destroy(instance);
-                _states[systemId] = UIState.Unloaded;
-                Addressables.Release(handle);
-                _handles.Remove(systemId);
-                throw;
+                _closingTasks.Remove(systemId);
+            }
+        }
+
+        public async Task ReleaseAsync(string systemId)
+        {
+            if (GetState(systemId) == UIState.Open)
+            {
+                await CloseAsync(systemId);
+                return;
             }
 
-            controller.SystemId = systemId;
-            controller.UIManager = this;
+            if (_panels.RemoveHidden(systemId, out var hidden))
+            {
+                ReleasePanel(systemId, hidden, false);
+                return;
+            }
+
+            _loader.Release(systemId);
+            _states[systemId] = UIState.Unloaded;
+        }
+
+        public bool IsOpen(string systemId)
+        {
+            return GetState(systemId) == UIState.Open && _panels.TryGetActive(systemId, out _);
+        }
+
+        public UIState GetState(string systemId)
+        {
+            return _states.TryGetValue(systemId, out var state) ? state : UIState.Unloaded;
+        }
+
+        public UIViewBase GetTopLayer()
+        {
+            return _layers.Top.view;
+        }
+
+        public IReadOnlyList<string> GetLayerStack()
+        {
+            return _layers.Stack;
+        }
+
+        public void RegisterService<T>(T service) where T : class
+        {
+            _services.RegisterService(service);
+        }
+
+        public bool TryGetService<T>(out T service) where T : class
+        {
+            return _services.TryGetService(out service);
+        }
+
+        public void UnregisterService<T>() where T : class
+        {
+            _services.UnregisterService<T>();
+        }
+
+        public void ClearServices()
+        {
+            _services.Clear();
+        }
+
+        private async Task<UIViewBase> OpenAfterCloseAsync(string systemId, MessagePayload payload, Task closingTask)
+        {
+            await closingTask;
+            return await OpenAsync(systemId, payload);
+        }
+
+        private async Task<UIViewBase> OpenCoreAsync(string systemId, MessagePayload payload)
+        {
+            _states[systemId] = UIState.Loading;
+            GameObject instance = null;
+            UIControllerBase controller = null;
             var pushedToLayerStack = false;
             try
             {
+                var prefab = await _loader.LoadPrefabAsync(systemId);
+                instance = Instantiate(prefab, GetOrCreateUiRoot());
+                instance.SetActive(false);
+                _layers.AssignSortingOrder(instance);
+
+                var view = instance.GetComponent<UIViewBase>();
+                if (view == null)
+                {
+                    throw new MissingComponentException($"UI prefab '{systemId}' must have UIViewBase.");
+                }
+
+                controller = CreateController(systemId);
+                controller.SystemId = systemId;
+                controller.UIManager = this;
                 controller.BindView(view);
-                _activeViews[systemId] = view;
-                _activeControllers[systemId] = controller;
-                _handles[systemId] = handle;
+
+                var panel = new UIPanelInstance(systemId, instance, view, controller);
+                _panels.AddActive(panel);
                 controller.OnPreOpen();
                 controller.Initialize(payload);
                 controller.Flush();
-                controller.OnOpened();
 
                 instance.SetActive(true);
-                var previousTop = _layerStack.Top;
-                _layerStack.Push(systemId, view);
+                var previousTop = _layers.Top;
+                _layers.Push(systemId, view);
                 pushedToLayerStack = true;
-                if (previousTop.view != null && _activeControllers.TryGetValue(previousTop.systemId, out var previousController))
+                if (previousTop.view != null && _panels.TryGetActive(previousTop.systemId, out var previousPanel))
                 {
-                    previousController.OnDeactivated();
+                    previousPanel.Controller.OnDeactivated();
                 }
 
+                controller.OnOpened();
                 controller.OnActivated();
                 _states[systemId] = UIState.Open;
                 if (_pendingClose.Remove(systemId))
@@ -157,49 +315,67 @@ namespace KK.UI.UMG
             {
                 if (pushedToLayerStack)
                 {
-                    _layerStack.Pop(systemId);
+                    _layers.Pop(systemId);
                 }
 
-                _activeControllers.Remove(systemId);
-                _activeViews.Remove(systemId);
-                _handles.Remove(systemId);
+                _panels.Remove(systemId);
                 _states[systemId] = UIState.Unloaded;
-                controller.Dispose();
-                Destroy(instance);
-                Addressables.Release(handle);
+                _pendingClose.Remove(systemId);
+                try
+                {
+                    controller?.Dispose();
+                }
+                finally
+                {
+                    DestroyObject(instance);
+                    _loader.Release(systemId);
+                }
+
                 throw;
+            }
+            finally
+            {
+                _openingTasks.Remove(systemId);
             }
         }
 
-        public async Task CloseAsync(string systemId)
+        private Task CloseCoreAsync(string systemId)
         {
             var state = GetState(systemId);
-            if (state == UIState.Loading)
+            if (state == UIState.Hidden)
             {
-                _pendingClose.Add(systemId);
-                return;
+                if (_panels.RemoveHidden(systemId, out var hidden))
+                {
+                    ReleasePanel(systemId, hidden, false);
+                }
+
+                return Task.CompletedTask;
             }
 
             if (state != UIState.Open)
             {
-                return;
+                return Task.CompletedTask;
             }
 
-            var top = _layerStack.Top;
+            var top = _layers.Top;
             if (top.systemId != systemId)
             {
                 Debug.LogWarning($"[UIManager] CloseAsync('{systemId}') ignored: not top layer. Close top-first.");
-                return;
+                return Task.CompletedTask;
+            }
+
+            if (!_panels.RemoveActive(systemId, out var panel))
+            {
+                _states[systemId] = UIState.Unloaded;
+                return Task.CompletedTask;
             }
 
             _states[systemId] = UIState.Closing;
-            var view = _activeViews[systemId];
-            _activeControllers.TryGetValue(systemId, out var controller);
             Exception closeException = null;
             try
             {
-                controller?.OnPreClose();
-                controller?.Close();
+                panel.Controller.OnPreClose();
+                panel.Controller.Close();
             }
             catch (Exception ex)
             {
@@ -207,17 +383,12 @@ namespace KK.UI.UMG
             }
             finally
             {
-                _layerStack.Pop(systemId);
+                _layers.Pop(systemId);
                 try
                 {
-                    controller?.OnDeactivated();
-                    var newTop = _layerStack.Top;
-                    if (newTop.view != null && _activeControllers.TryGetValue(newTop.systemId, out var newTopController))
-                    {
-                        newTopController.OnActivated();
-                    }
-
-                    controller?.OnClosed();
+                    panel.Controller.OnDeactivated();
+                    ActivateTopController();
+                    panel.Controller.OnClosed();
                 }
                 catch (Exception ex)
                 {
@@ -229,7 +400,7 @@ namespace KK.UI.UMG
 
                 try
                 {
-                    controller?.Dispose();
+                    panel.Controller.Dispose();
                 }
                 catch (Exception ex)
                 {
@@ -239,81 +410,67 @@ namespace KK.UI.UMG
                     }
                 }
 
-                _activeControllers.Remove(systemId);
-                Destroy(view.gameObject);
-                _activeViews.Remove(systemId);
-
-                if (_handles.TryGetValue(systemId, out var handle))
-                {
-                    Addressables.Release(handle);
-                    _handles.Remove(systemId);
-                }
+                DestroyObject(panel.Root);
+                _loader.Release(systemId);
+                _states[systemId] = UIState.Unloaded;
             }
 
-            await Task.Yield();
-            _states[systemId] = UIState.Unloaded;
             if (closeException != null)
             {
-                throw closeException;
+                return Task.FromException(closeException);
             }
+
+            return Task.CompletedTask;
         }
 
-        public bool IsOpen(string systemId)
+        private void ReleasePanel(string systemId, UIPanelInstance panel, bool callDeactivated)
         {
-            return GetState(systemId) == UIState.Open && _activeViews.ContainsKey(systemId);
-        }
-
-        public UIState GetState(string systemId)
-        {
-            return _states.TryGetValue(systemId, out var state) ? state : UIState.Unloaded;
-        }
-
-        public UIViewBase GetTopLayer()
-        {
-            return _layerStack.Top.view;
-        }
-
-        public IReadOnlyList<string> GetLayerStack()
-        {
-            return _layerStack.Stack;
-        }
-
-        public void RegisterService<T>(T service) where T : class
-        {
-            if (service == null)
+            Exception firstException = null;
+            try
             {
-                throw new ArgumentNullException(nameof(service));
-            }
+                panel.Controller.OnPreClose();
+                panel.Controller.Close();
+                if (callDeactivated)
+                {
+                    panel.Controller.OnDeactivated();
+                }
 
-            var serviceType = typeof(T);
-            if (_services.ContainsKey(serviceType))
+                panel.Controller.OnClosed();
+            }
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"Service '{serviceType.FullName}' is already registered. Unregister it before registering a replacement.");
+                firstException = ex;
             }
 
-            _services.Add(serviceType, service);
-        }
-
-        public bool TryGetService<T>(out T service) where T : class
-        {
-            if (_services.TryGetValue(typeof(T), out var raw) && raw is T typed)
+            try
             {
-                service = typed;
-                return true;
+                panel.Controller.Dispose();
+            }
+            catch (Exception ex)
+            {
+                if (firstException == null)
+                {
+                    firstException = ex;
+                }
             }
 
-            service = null;
-            return false;
+            DestroyObject(panel.Root);
+            _loader.Release(systemId);
+            _states[systemId] = UIState.Unloaded;
+
+            if (firstException != null)
+            {
+                throw firstException;
+            }
         }
 
-        public void UnregisterService<T>() where T : class
+        private void ActivateTopController()
         {
-            _services.Remove(typeof(T));
-        }
-
-        public void ClearServices()
-        {
-            _services.Clear();
+            var top = _layers.Top;
+            if (top.view != null && _panels.TryGetActive(top.systemId, out var topPanel))
+            {
+                topPanel.Controller.OnActivated();
+            }
         }
 
         private UIControllerBase CreateController(string systemId)
@@ -326,54 +483,9 @@ namespace KK.UI.UMG
             return factory();
         }
 
-        private void SubscribeBusRoutes()
-        {
-            foreach (var route in _busRoutes)
-            {
-                var routeCopy = route;
-                var subscription = UIMessageBus.Subscribe(routeCopy.Channel, (channel, payload) =>
-                {
-                    if (routeCopy.Action == UIBusRouteAction.Open)
-                    {
-                        _ = OpenAsync(routeCopy.SystemId, payload ?? new MessagePayload());
-                        return;
-                    }
-
-                    if (routeCopy.Action == UIBusRouteAction.Close)
-                    {
-                        _ = CloseAsync(routeCopy.SystemId);
-                    }
-                });
-
-                _busSubscriptions.Add(subscription);
-            }
-        }
-
         private static string GetAddressablesKey(string systemId)
         {
             return $"UI/{systemId}/{systemId}View";
-        }
-
-        private void AssignSortingOrder(GameObject instance)
-        {
-            var canvas = instance.GetComponent<Canvas>();
-            if (canvas == null)
-            {
-                canvas = instance.AddComponent<Canvas>();
-            }
-
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = _nextSortingOrder++;
-
-            if (instance.GetComponent<GraphicRaycaster>() == null)
-            {
-                instance.AddComponent<GraphicRaycaster>();
-            }
-
-            if (instance.GetComponent<CanvasGroup>() == null)
-            {
-                instance.AddComponent<CanvasGroup>();
-            }
         }
 
         private Transform GetOrCreateUiRoot()
@@ -432,6 +544,21 @@ namespace KK.UI.UMG
 #endif
         }
 
-    }
+        private static void DestroyObject(GameObject instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
 
+            if (Application.isPlaying)
+            {
+                Destroy(instance);
+            }
+            else
+            {
+                DestroyImmediate(instance);
+            }
+        }
+    }
 }

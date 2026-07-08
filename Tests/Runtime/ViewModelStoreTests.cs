@@ -42,5 +42,20 @@ namespace KK.UI.UMG.Tests
 
             Assert.Pass();
         }
+
+        [Test]
+        public void TakeDirtyReusesBuffer()
+        {
+            var store = new ViewModelStore();
+            store.Update("Message", "hello");
+
+            var first = store.TakeDirty();
+            store.Update("Message", "goodbye");
+            var second = store.TakeDirty();
+
+            Assert.That(ReferenceEquals(first, second), Is.True);
+            Assert.That(second, Has.Count.EqualTo(1));
+            Assert.That(second[0].Value, Is.EqualTo("goodbye"));
+        }
     }
 }

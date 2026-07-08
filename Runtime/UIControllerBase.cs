@@ -55,6 +55,14 @@ namespace KK.UI.UMG
         {
         }
 
+        public virtual void OnHidden()
+        {
+        }
+
+        public virtual void OnShown(MessagePayload payload)
+        {
+        }
+
         public virtual void OnPreClose()
         {
         }

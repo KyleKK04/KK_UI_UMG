@@ -28,8 +28,13 @@ public sealed class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; }
 
+    public Task PreloadAsync(string systemId);
     public Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null);
+    public Task<UIViewBase> ShowAsync(string systemId, MessagePayload payload = null);
+    public Task HideAsync(string systemId);
     public Task CloseAsync(string systemId);
+    public Task CloseAsync(string systemId, UICloseMode mode);
+    public Task ReleaseAsync(string systemId);
 
     public bool IsOpen(string systemId);
     public UIState GetState(string systemId);
@@ -82,6 +87,39 @@ public sealed class UIBootstrap : MonoBehaviour
 ```
 
 Close is top-first. If another UI is above `InventoryPanel`, closing `InventoryPanel` directly is ignored and a warning is logged.
+
+`CloseAsync(systemId)` is a real lifecycle close: it disposes the Controller, destroys the View instance, and releases the Addressables handle.
+
+## Preload / Hide / Show For Frequent Panels
+
+For high-frequency UI such as inventory, pause, map, settings, or HUD panels, avoid repeatedly destroying and reopening the panel. Preload once, open once, then hide and show:
+
+```csharp
+await UIManager.Instance.PreloadAsync("InventoryPanel");
+await UIManager.Instance.OpenAsync("InventoryPanel");
+await UIManager.Instance.HideAsync("InventoryPanel");
+await UIManager.Instance.ShowAsync("InventoryPanel");
+```
+
+Use `ReleaseAsync` when leaving the gameplay mode or when memory should be released:
+
+```csharp
+await UIManager.Instance.ReleaseAsync("InventoryPanel");
+```
+
+Equivalent close-mode form:
+
+```csharp
+await UIManager.Instance.CloseAsync("InventoryPanel", UICloseMode.Hide);
+```
+
+Lifecycle rules:
+
+- `PreloadAsync` only loads the Addressables prefab; it does not create View or Controller.
+- `HideAsync` keeps View, Controller, and Store alive; it does not call `Dispose`, destroy the View, or release Addressables.
+- `ShowAsync` reuses the hidden View and Controller; it does not rebind or reinitialize.
+- `CloseAsync` / `ReleaseAsync` are the release paths.
+- Business data freshness should still come from services/events/Controller Store updates, not from cached UI state.
 
 ## Payload
 
@@ -146,5 +184,6 @@ When a UI package is created or modified, include:
 Add KK.UI.UMG.UIManager to a scene GameObject.
 Run Validate -> Generate -> Verify.
 Open with await UIManager.Instance.OpenAsync("<PackageId>");
+For frequent panels, use PreloadAsync + HideAsync/ShowAsync.
 If requiredServices exists, register those services before opening.
 ```
