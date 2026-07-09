@@ -256,6 +256,8 @@ UGUI event
 
 生成器拥有 `Scripts/`、`Prefabs/`、`Reports/`、`Assets/` 子目录；手写业务 partial 放在对应 UI 文件夹根目录，不放进 `Scripts/`。
 
+`assets.json` 里的 `contentHash` 是可选内容锁，不是必填项。只写 `source` 时会跳过 hash 校验；填写 `contentHash` 时才会严格校验 `sha256:` 格式和实际文件内容。TMP 字体、动态 atlas、材质等 Unity 可能自动重写的资源建议不填 `contentHash`，图标和稳定贴图等需要防漂移的资源再填写。
+
 ### AI Authoring Skill 随包交付
 
 Package 内包含 Codex Skill：

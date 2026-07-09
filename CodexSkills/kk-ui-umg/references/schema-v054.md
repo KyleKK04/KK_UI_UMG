@@ -238,8 +238,31 @@ Rules:
 - Source-owned assets live under `<Source Package Root>/Assets/`; the default convention is `Assets/UI/Source/<PackageId>/Assets/`.
 - Source-owned assets target `<Generated Parent>/<PackageId>/Assets/...`; default manifests still use `Assets/UI/Generated/<PackageId>/Assets/...`.
 - Shared assets must be under `sharedAssetRoots`.
-- `contentHash` is optional in the current static asset strategy. If present, verify `sha256:`. If absent, report a Warning and actual hash, but do not block generation.
+- `contentHash` is an optional content lock. If absent, skip hash verification completely. If present, it must use `sha256:` and must match the source file.
+- For fonts, prioritize a valid `TMP_FontAsset` asset reference through `source`. Do not add `contentHash` just to satisfy validation; add it only when the user explicitly wants to lock a stable font asset version.
+- Prefer omitting `contentHash` for other Unity-rewritten assets such as dynamic atlases and materials. Use `contentHash` for stable icons, textures, and other assets where drift should be detected.
 - The current static asset strategy supports static `Sprite` references for `Image`; do not imply runtime Addressables asset-key sprite loading.
+
+Valid asset without hash verification:
+
+```json
+{
+  "id": "font.zhHans",
+  "type": "TMP_FontAsset",
+  "source": "Assets/_Project/Fonts/PingFang-Regular SDF.asset"
+}
+```
+
+Valid asset with content lock:
+
+```json
+{
+  "id": "icon.key",
+  "type": "Sprite",
+  "source": "Assets/UI/Source/InventoryPanel/Assets/key.png",
+  "contentHash": "sha256:..."
+}
+```
 
 ## codegen.json
 

@@ -25,8 +25,8 @@ This page explains common Validate / Generate / Verify issues and the usual fix 
 | `AST004` | `asset.source` is missing or not an existing Unity asset path. | Use an existing `Assets/...` or `Packages/...` file. |
 | `AST005` | Asset is outside `Source/Assets` and outside `sharedAssetRoots`. | Move package-owned assets into `Source/Assets` or add a narrow shared root. |
 | `AST006` | Asset target is outside Generated assets. | Keep copied package assets under `<Generated Parent>/<PackageId>/Assets`. |
-| `AST008` | `contentHash` is missing. | Optional in v1.0.x; copy the reported `sha256:` value for stricter verification. |
-| `AST009` / `AST012` | Asset hash format or value is wrong. | Recompute and update the `sha256:` content hash. |
+| `AST008` | Deprecated; no longer emitted for missing `contentHash`. | Omit `contentHash` to skip hash verification, or add `sha256:...` when you want to lock asset content. |
+| `AST009` / `AST012` | Asset hash format or value is wrong. | Recompute and update the `sha256:` content hash, or remove `contentHash` for Unity-rewritten assets such as TMP font assets, dynamic atlases, or materials. |
 
 ## Codegen And Runtime Contract
 

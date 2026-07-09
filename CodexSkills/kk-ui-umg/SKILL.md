@@ -30,6 +30,7 @@ When a user has just imported the package and wants to create their own UI, this
 - Do not attach arbitrary Unity components.
 - Use only supported manifest controls and `layoutComponents`.
 - Source package roots must stay under `Assets/` or `Packages/`, the final folder name must match `packageId`, and Source must not be placed under a `Generated` folder.
+- Asset `contentHash` is an optional content lock. Font assets should prioritize a valid `TMP_FontAsset` asset reference through `assets.json` `source`; do not add `contentHash` just to satisfy validation. Add `sha256:` only when the user explicitly wants to lock a stable font asset version. Also omit `contentHash` for other Unity-rewritten assets such as dynamic atlases and materials.
 - For new UI packages, use `Sample/InventoryPanelSample/Source/KkSampleInventoryPanel` as the primary package-contained template.
 - Prefer current Source examples over copied generated output.
 - Never use sample or project Generated output as the authoring template for new Source JSON.

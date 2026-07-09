@@ -4,8 +4,7 @@
       "id": "font.default",
       "type": "TMP_FontAsset",
       "source": "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset",
-      "target": "",
-      "contentHash": "sha256:ceb505fb1e4a4f084bc6fe75b3cfaa1d216acecd8f590fc51800c1b71f083f2c"
+      "target": ""
     },
     {
       "id": "image.inventory.panel_bg",

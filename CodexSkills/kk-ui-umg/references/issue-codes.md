@@ -13,8 +13,8 @@ Use this reference when explaining Validate / Generate / Verify failures.
 | `AST004` | Use an existing `Assets/...` or `Packages/...` file for `asset.source`. |
 | `AST005` | Keep package-owned assets under `Source/Assets` or add a narrow `sharedAssetRoots` entry. |
 | `AST006` | Copied package assets must resolve under `<Generated Parent>/<PackageId>/Assets`. |
-| `AST008` | Missing `contentHash` is a warning in v1.0.x; copy the reported `sha256:` to make it strict. |
-| `AST009` / `AST012` | Recompute and update the `sha256:` content hash. |
+| `AST008` | Deprecated; missing `contentHash` is allowed and no longer emits a warning. |
+| `AST009` / `AST012` | Recompute and update the `sha256:` content hash, or remove `contentHash` for assets Unity rewrites. |
 | `GEN003` | Use default `Assets/UI/Generated/<PackageId>` or select `Generated Parent Folder`. |
 | `GEN006` | Use Addressables key `UI/<PackageId>/<PackageId>View`. |
 | `GEN007` | Use `UIViewBase` for View and `UIControllerBase` for Controller. |

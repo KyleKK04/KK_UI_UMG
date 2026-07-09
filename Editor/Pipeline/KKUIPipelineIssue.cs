@@ -39,7 +39,7 @@ namespace KK.UI.UMG.Editor.Pipeline
                 case "AST006":
                     return "Package-owned asset targets must resolve under the Generated Assets folder.";
                 case "AST008":
-                    return "contentHash is optional in v1.0.x; copy the reported sha256 value if you want strict asset verification.";
+                    return "AST008 is deprecated. Omit contentHash to skip hash verification, or provide sha256:... to lock asset content.";
                 case "AST009":
                 case "AST012":
                     return "Regenerate or update the sha256 contentHash after changing the source asset.";

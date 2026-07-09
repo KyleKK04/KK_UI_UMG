@@ -113,10 +113,8 @@ namespace KK.UI.UMG.Editor.Validators
 
         private static void ValidateHash(KKUIPipelineContext context, UiAssetSpec asset, string source)
         {
-            var actual = ComputeSha256(source);
             if (string.IsNullOrWhiteSpace(asset.ContentHash))
             {
-                context.Add(KKUIPipelineIssueSeverity.Warning, "AST008", $"Asset '{asset.Id}' contentHash is missing. Actual hash is sha256:{actual}.");
                 return;
             }
 
@@ -127,6 +125,7 @@ namespace KK.UI.UMG.Editor.Validators
                 return;
             }
 
+            var actual = ComputeSha256(source);
             if (expected.ToLowerInvariant() != actual)
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "AST012", $"Asset '{asset.Id}' contentHash mismatch. Expected {asset.ContentHash}, actual sha256:{actual}.");
