@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using KK.UI.UMG.Editor.Generators;
@@ -74,6 +75,62 @@ namespace KK.UI.UMG.Editor.Tests
             new LayoutValidator().Validate(context);
 
             Assert.That(context.Issues.Any(issue => issue.Code == "LAY064" && issue.Severity == KKUIPipelineIssueSeverity.Error), Is.True);
+        }
+
+        [Test]
+        public void RejectsInvalidTextAlignment()
+        {
+            var context = CreateContext();
+            context.Layout.Root.Children.Add(new UiLayoutNode
+            {
+                Type = "Text",
+                Id = "Title",
+                Rect = new UiRectSpec(),
+                Text = new UiTextSpec { Alignment = "Centerish" }
+            });
+
+            new LayoutValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "LAY067" && issue.Severity == KKUIPipelineIssueSeverity.Error), Is.True);
+        }
+
+        [Test]
+        public void ParsesManifestTextAlignment()
+        {
+            var method = typeof(UguiPrefabGenerator).GetMethod("ParseTextAlignment", BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.That(method, Is.Not.Null);
+            Assert.That(method.Invoke(null, new object[] { "MiddleCenter" }), Is.EqualTo(TextAlignmentOptions.Midline));
+            Assert.That(method.Invoke(null, new object[] { null }), Is.EqualTo(TextAlignmentOptions.TopLeft));
+        }
+
+        [Test]
+        public void VerifierRejectsGeneratedTextAlignmentMismatch()
+        {
+            var prefab = new GameObject("Root");
+            var title = new GameObject("Title");
+            title.transform.SetParent(prefab.transform, false);
+            title.AddComponent<TextMeshProUGUI>().alignment = TextAlignmentOptions.MidlineLeft;
+            try
+            {
+                var context = CreateContext();
+                context.Layout.Root.Children.Add(new UiLayoutNode
+                {
+                    Type = "Text",
+                    Id = "Title",
+                    Rect = new UiRectSpec(),
+                    Text = new UiTextSpec { Alignment = "MiddleCenter" }
+                });
+                var method = typeof(GeneratedAssetVerifier).GetMethod("VerifyTextAlignments", BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(KKUIPipelineContext), typeof(GameObject) }, null);
+
+                Assert.That(method, Is.Not.Null);
+                method.Invoke(null, new object[] { context, prefab });
+                Assert.That(context.Issues.Any(issue => issue.Code == "VER035" && issue.Severity == KKUIPipelineIssueSeverity.Error), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(prefab);
+            }
         }
 
         [Test]

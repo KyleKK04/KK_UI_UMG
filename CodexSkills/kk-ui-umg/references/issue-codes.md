@@ -19,5 +19,7 @@ Use this reference when explaining Validate / Generate / Verify failures.
 | `GEN006` | Use Addressables key `UI/<PackageId>/<PackageId>View`. |
 | `GEN007` | Use `UIViewBase` for View and `UIControllerBase` for Controller. |
 | `GEN008` / `GEN009` | Generated Parent must be under `Assets/` or `Packages/`, and output is `<Generated Parent>/<PackageId>`. |
+| `LAY067` | Use a supported Text alignment: `UpperLeft`, `UpperCenter`, `UpperRight`, `MiddleLeft`, `MiddleCenter`, `MiddleRight`, `LowerLeft`, `LowerCenter`, or `LowerRight`. |
+| `VER035` | Regenerate the prefab; a generated TMP Text alignment does not match `layout.json`. |
 | `CG020`-`CG023` | Fix `requiredServices` type/property entries; properties must be valid unique C# identifiers. |
 | `GENPENDING` | Wait for Unity compilation; prefab generation should continue automatically. |

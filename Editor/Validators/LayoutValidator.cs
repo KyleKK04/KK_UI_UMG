@@ -101,6 +101,13 @@ namespace KK.UI.UMG.Editor.Validators
                 context.Add(KKUIPipelineIssueSeverity.Error, "LAY006", $"Text node '{node.Id}' must define text.");
             }
 
+            if (node.Type == "Text" &&
+                !string.IsNullOrWhiteSpace(node.Text?.Alignment) &&
+                !TextAnchors.Contains(node.Text.Alignment))
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "LAY067", $"Text node '{node.Id}' alignment '{node.Text.Alignment}' is not supported.");
+            }
+
             if (node.Type == "VerticalList" && node.VerticalList?.ItemTemplate != null)
             {
                 ValidateItemTemplate(context, node);

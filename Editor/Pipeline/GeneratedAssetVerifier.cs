@@ -39,6 +39,7 @@ namespace KK.UI.UMG.Editor.Pipeline
             verified.AddRange(VerifyGeneratedScripts(context));
             VerifyRuntimeSourceBoundaries(context);
             VerifyTextFonts(context, prefab);
+            VerifyTextAlignments(context, prefab);
             VerifyPersistentEvents(prefab, context);
             VerifyPrefabDependencies(context, prefabPath);
             VerifyAddressable(context, prefabPath);
@@ -213,6 +214,36 @@ namespace KK.UI.UMG.Editor.Pipeline
                     context.Add(KKUIPipelineIssueSeverity.Error, "VER008", $"Text '{text.name}' has no TMP font asset.");
                 }
             }
+        }
+
+        private static void VerifyTextAlignments(KKUIPipelineContext context, GameObject prefab)
+        {
+            VerifyTextAlignments(context, prefab, context.Layout.Root);
+        }
+
+        private static void VerifyTextAlignments(KKUIPipelineContext context, GameObject prefab, UiLayoutNode node)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            if (node.Type == "Text" && node.Text != null)
+            {
+                var text = prefab.GetComponentsInChildren<TextMeshProUGUI>(true).FirstOrDefault(component => component.name == node.Id);
+                var expected = UguiPrefabGenerator.ParseTextAlignment(node.Text.Alignment);
+                if (text != null && text.alignment != expected)
+                {
+                    context.Add(KKUIPipelineIssueSeverity.Error, "VER035", $"Text '{node.Id}' alignment mismatch. Expected '{expected}', got '{text.alignment}'.");
+                }
+            }
+
+            foreach (var child in node.Children ?? new List<UiLayoutNode>())
+            {
+                VerifyTextAlignments(context, prefab, child);
+            }
+
+            VerifyTextAlignments(context, prefab, node.VerticalList?.ItemTemplate);
         }
 
         private static void VerifyPersistentEvents(GameObject prefab, KKUIPipelineContext context)

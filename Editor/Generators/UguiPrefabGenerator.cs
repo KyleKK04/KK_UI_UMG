@@ -81,6 +81,7 @@ namespace KK.UI.UMG.Editor.Generators
                     text.fontSize = node.Text?.FontSize > 0 ? node.Text.FontSize : 24f;
                     text.font = LoadFontAsset(context, assetIndex, node.Text?.FontAsset) ?? LoadDefaultFontAsset();
                     text.color = ParseColor(node.Text?.Color, Color.white);
+                    text.alignment = ParseTextAlignment(node.Text?.Alignment);
                     controls[node.Id] = text;
                     break;
                 }
@@ -554,6 +555,23 @@ namespace KK.UI.UMG.Editor.Generators
                 "LowerCenter" => TextAnchor.LowerCenter,
                 "LowerRight" => TextAnchor.LowerRight,
                 _ => TextAnchor.UpperLeft
+            };
+        }
+
+        internal static TextAlignmentOptions ParseTextAlignment(string value)
+        {
+            return value switch
+            {
+                "UpperLeft" => TextAlignmentOptions.TopLeft,
+                "UpperCenter" => TextAlignmentOptions.Top,
+                "UpperRight" => TextAlignmentOptions.TopRight,
+                "MiddleLeft" => TextAlignmentOptions.MidlineLeft,
+                "MiddleCenter" => TextAlignmentOptions.Midline,
+                "MiddleRight" => TextAlignmentOptions.MidlineRight,
+                "LowerLeft" => TextAlignmentOptions.BottomLeft,
+                "LowerCenter" => TextAlignmentOptions.Bottom,
+                "LowerRight" => TextAlignmentOptions.BottomRight,
+                _ => TextAlignmentOptions.TopLeft
             };
         }
 
