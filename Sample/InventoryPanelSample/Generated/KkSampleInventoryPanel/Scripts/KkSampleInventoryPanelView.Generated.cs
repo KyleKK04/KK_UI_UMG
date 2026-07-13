@@ -9,10 +9,13 @@ namespace KK.UI.UMG.Samples.Inventory
 {
     public partial class KkSampleInventoryPanelView : UIViewBase
     {
+        [SerializeField] private RectTransform _inventoryPanelRoot;
+        [SerializeField] private RectTransform _header;
         [SerializeField] private Image _headerIcon;
         [SerializeField] private TextMeshProUGUI _titleText;
         [SerializeField] private Button _closeButton;
         [SerializeField] private TextMeshProUGUI _closeLabel;
+        [SerializeField] private RectTransform _filterBar;
         [SerializeField] private TextMeshProUGUI _searchCaption;
         [SerializeField] private TMP_InputField _searchInput;
         [SerializeField] private TextMeshProUGUI _categoryCaption;
@@ -20,7 +23,9 @@ namespace KK.UI.UMG.Samples.Inventory
         [SerializeField] private Toggle _equippedOnlyToggle;
         [SerializeField] private TextMeshProUGUI _qualityCaption;
         [SerializeField] private Slider _qualitySlider;
+        [SerializeField] private RectTransform _body;
         [SerializeField] private UIListView _inventoryList;
+        [SerializeField] private RectTransform _detailPanel;
         [SerializeField] private RawImage _previewImage;
         [SerializeField] private TextMeshProUGUI _selectedNameText;
         [SerializeField] private TextMeshProUGUI _selectedDescText;
@@ -28,18 +33,23 @@ namespace KK.UI.UMG.Samples.Inventory
         [SerializeField] private TextMeshProUGUI _notesText;
         [SerializeField] private Button _useButton;
         [SerializeField] private TextMeshProUGUI _useLabel;
+        [SerializeField] private RectTransform _footer;
         [SerializeField] private TextMeshProUGUI _statusText;
         [SerializeField] private Scrollbar _weightScrollbar;
         [SerializeField] private Button _refreshButton;
         [SerializeField] private TextMeshProUGUI _refreshLabel;
+        [SerializeField] private RectTransform _assetReferences;
         [SerializeField] private Image _swordIconAsset;
         [SerializeField] private Image _shieldIconAsset;
         [SerializeField] private Image _potionIconAsset;
 
+        public RectTransform InventoryPanelRoot => _inventoryPanelRoot;
+        public RectTransform Header => _header;
         public Image HeaderIcon => _headerIcon;
         public TextMeshProUGUI TitleText => _titleText;
         public Button CloseButton => _closeButton;
         public TextMeshProUGUI CloseLabel => _closeLabel;
+        public RectTransform FilterBar => _filterBar;
         public TextMeshProUGUI SearchCaption => _searchCaption;
         public TMP_InputField SearchInput => _searchInput;
         public TextMeshProUGUI CategoryCaption => _categoryCaption;
@@ -47,7 +57,9 @@ namespace KK.UI.UMG.Samples.Inventory
         public Toggle EquippedOnlyToggle => _equippedOnlyToggle;
         public TextMeshProUGUI QualityCaption => _qualityCaption;
         public Slider QualitySlider => _qualitySlider;
+        public RectTransform Body => _body;
         public UIListView InventoryList => _inventoryList;
+        public RectTransform DetailPanel => _detailPanel;
         public RawImage PreviewImage => _previewImage;
         public TextMeshProUGUI SelectedNameText => _selectedNameText;
         public TextMeshProUGUI SelectedDescText => _selectedDescText;
@@ -55,10 +67,12 @@ namespace KK.UI.UMG.Samples.Inventory
         public TextMeshProUGUI NotesText => _notesText;
         public Button UseButton => _useButton;
         public TextMeshProUGUI UseLabel => _useLabel;
+        public RectTransform Footer => _footer;
         public TextMeshProUGUI StatusText => _statusText;
         public Scrollbar WeightScrollbar => _weightScrollbar;
         public Button RefreshButton => _refreshButton;
         public TextMeshProUGUI RefreshLabel => _refreshLabel;
+        public RectTransform AssetReferences => _assetReferences;
         public Image SwordIconAsset => _swordIconAsset;
         public Image ShieldIconAsset => _shieldIconAsset;
         public Image PotionIconAsset => _potionIconAsset;

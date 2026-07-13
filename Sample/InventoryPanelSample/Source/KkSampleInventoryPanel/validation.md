@@ -5,17 +5,17 @@
 
 | Step | Status | Updated At | Source | Notes |
 |---|---|---|---|---|
-| Validate | Pass | 2026-07-07T06:06:17.6552570Z | KKUIPipeline | - |
-| Generate | Pass | 2026-07-07T06:06:16.2366180Z | KKUIPipeline | - |
-| Verify | Pass | 2026-07-07T06:06:17.6552570Z | GeneratedAssetVerifier | - |
+| Validate | Pass | 2026-07-13T12:32:02.2085310Z | KKUIPipeline | - |
+| Generate | Pass | 2026-07-13T12:32:02.0477600Z | KKUIPipeline | - |
+| Verify | Pass | 2026-07-13T12:32:02.2085310Z | GeneratedAssetVerifier | - |
 | Preview | Pass | 2026-07-07T06:06:18.9971350Z | KKUIPipelineWindow | - |
-| Runtime | Pending | - | Manual | Open `Assets/Scenes/KkSampleInventorySample.unity` and Play after installing the sample. |
+| Runtime | Pending | 2026-07-13T12:32:02.0477600Z | KKUIPipeline | Generate requires runtime re-verification. |
 
 ## Last Operation
 
 | Item | Value |
 |---|---|
-| Operation | Preview |
+| Operation | Verify |
 | Success | True |
 | Issues | 0 |
 | Generated Report | `Packages/com.kk.ui-umg/Sample/InventoryPanelSample/Generated/KkSampleInventoryPanel/Reports/generate-report.json` |

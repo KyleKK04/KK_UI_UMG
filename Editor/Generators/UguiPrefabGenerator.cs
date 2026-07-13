@@ -28,7 +28,11 @@ namespace KK.UI.UMG.Editor.Generators
             root.name = context.Codegen.View.ClassName;
             EnsureLayerComponents(root);
             var marker = root.AddComponent<GeneratedAssetMarker>();
-            marker.Initialize(context.Package.PackageId);
+            marker.Initialize(
+                context.Package.PackageId,
+                string.IsNullOrWhiteSpace(context.PackageManifestPath)
+                    ? null
+                    : AssetManifestUtility.ToAssetPath(context.PackageManifestPath));
 
             var viewType = FindType(context.Codegen.Namespace, context.Codegen.View.ClassName);
             if (viewType == null)

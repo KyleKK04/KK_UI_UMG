@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.0.6
+
+- Split KKPipeline into top-level `Import` and `Export` modes while preserving the existing `Validate` / `Generate` / `Verify` Import flow.
+- Made Export selection-driven: save the generated Prefab, select it in the Project window, then click `Export` to resolve and update its Source layout JSON.
+- Added guarded Prefab layout capture for anchors, anchored position, size, declared layout components, ScrollView content, and VerticalList item templates, with Source-only JSON writes and round-trip tests.
+- Replaced the Runtime notes/mark/reset panel with one `Runtime Verify` confirmation button; Generate now resets Runtime to Pending automatically.
+
 ## 1.0.5
 
 - Added optional handwritten View partial hooks for Open, Show, Hide, and Close transitions; `UIManager` now awaits them with per-panel serialization, cross-panel concurrency, interaction gating, cancellation, timeout, and rollback.

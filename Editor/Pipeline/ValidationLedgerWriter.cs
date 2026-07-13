@@ -190,6 +190,7 @@ namespace KK.UI.UMG.Editor.Pipeline
 
         private static void WriteGenerateResult(Dictionary<string, LedgerRow> rows, KKUIPipelineResult result, string now)
         {
+            Update(rows, "Runtime", "Pending", now, "KKUIPipeline", "Generate requires runtime re-verification.");
             var validationFailed = HasError(result, IsValidationIssue);
             Update(rows, "Validate", validationFailed ? "Fail" : "Pass", now, "KKUIPipeline", BuildIssueNote(result, IsValidationIssue));
 
@@ -396,11 +397,6 @@ namespace KK.UI.UMG.Editor.Pipeline
             {
                 row = DefaultRow(step);
                 rows[step] = row;
-            }
-
-            if (step == "Runtime" && row.Status == "Verified")
-            {
-                return;
             }
 
             row.Status = status;

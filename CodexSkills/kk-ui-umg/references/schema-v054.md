@@ -47,7 +47,7 @@ Rules:
 <!-- ui-pipeline:validation-ledger:end -->
 ```
 
-The pipeline may update only the marker block for Validate / Generate / Verify / Preview status. Preserve manual notes outside the markers. Do not save preview screenshots or write screenshot paths. Runtime remains `Pending` unless a PlayMode test or manual runtime check explicitly verified behavior and it is recorded with `Mark Runtime Verified`; use `Reset Runtime Pending` when re-verification is required. Runtime output uses only `Pending / Verified`, while legacy `Runtime: Pass` is accepted as a migration alias and rewritten as `Verified`.
+The pipeline may update only the marker block for Validate / Generate / Verify / Preview status. Preserve manual notes outside the markers. Do not save preview screenshots or write screenshot paths. Runtime remains `Pending` unless a PlayMode test explicitly verified behavior and the user confirms it with `Runtime Verify`; Generate automatically resets Runtime to `Pending` when re-verification is required. Runtime output uses only `Pending / Verified`, while legacy `Runtime: Pass` is accepted as a migration alias and rewritten as `Verified`.
 
 ## package.json
 

@@ -153,6 +153,21 @@ namespace KK.UI.UMG.Editor.Tests
         }
 
         [Test]
+        public void GenerateResetsRuntimeVerification()
+        {
+            var context = CreateContext();
+            var writer = new ValidationLedgerWriter();
+            writer.WritePipelineResult(context, new GamePipelineResultBuilder("Generate", true).Build());
+            writer.WriteRuntimeStatus(context, true, "Manual PlayMode", "Checked");
+
+            writer.WritePipelineResult(context, new GamePipelineResultBuilder("Generate", true).Build());
+
+            var text = File.ReadAllText(Path.Combine(_sourceRoot, "validation.md"));
+            Assert.That(text, Does.Contain("| Runtime | Pending |"));
+            Assert.That(text, Does.Contain("Generate requires runtime re-verification."));
+        }
+
+        [Test]
         public void PreviewUpdatesLedgerWithoutScreenshot()
         {
             var context = CreateContext();

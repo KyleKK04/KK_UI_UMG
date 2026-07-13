@@ -7,7 +7,7 @@ description: Create, modify, validate, or review KK_UI_UMG MVVM-C Unity UGUI Sou
 
 ## Overview
 
-Use this skill to work on the KK_UI_UMG MVVM-C Unity UI pipeline. Source packages default to `Assets/UI/Source/<PackageId>/`, but projects may choose another root under `Assets/` or `Packages/` as long as the final folder name matches `packageId`. Generated C# and UGUI prefabs are rebuildable outputs and must not be hand-edited.
+Use this skill to work on the KK_UI_UMG MVVM-C Unity UI pipeline. Source packages default to `Assets/UI/Source/<PackageId>/`, but projects may choose another root under `Assets/` or `Packages/` as long as the final folder name matches `packageId`. Generated C# and UGUI prefabs are rebuildable outputs. A designer may adjust supported layout values in a generated prefab only when those changes are explicitly captured back into Source with KKPipeline `Export` before the next generation.
 
 When a user has just imported the package and wants to create their own UI, this skill should be enough to author the Source package JSON files, explain the generated output, and explain the runtime `UIManager` setup needed to open the UI in a scene.
 
@@ -15,7 +15,7 @@ When a user has just imported the package and wants to create their own UI, this
 
 - Read existing Source files before changing them.
 - Do not guess existing node ids, field ids, handler names, asset ids, or loc keys.
-- Do not edit generated-owned files under `<Generated Parent>/<PackageId>/Scripts`, `Prefabs`, `Reports`, or `Assets`.
+- Do not edit generated-owned files under `<Generated Parent>/<PackageId>/Scripts`, `Reports`, or `Assets`. Generated Prefab layout edits are allowed only as temporary authoring input: save the Prefab, select it in the Project window, and run KKPipeline `Export`; unsupported Prefab changes remain disposable.
 - Do not write business Controller implementation unless the user explicitly asks for handwritten business code.
 - New UI authoring is UI-first by default. Do not add `requiredServices` until the user asks to connect business data.
 - If a UI needs existing business data or commands, declare `codegen.requiredServices` and create a UI-facing service adapter; do not put business model types or query logic into Source JSON.
@@ -45,7 +45,7 @@ When a user has just imported the package and wants to create their own UI, this
 - Store writes continue to use generic `Store.Update<T>`; do not invent `UpdateInt` / `UpdateFloat` / `UpdateBool` APIs.
 - Run Validate / Generate / Verify when Unity Editor access is available; otherwise tell the user exactly what remains to run.
 - Runtime ledger output uses only `Pending` or `Verified`. Legacy `Runtime: Pass` is read as `Verified`; never author new Runtime `Pass` rows.
-- Mark Runtime `Verified` only after a real PlayMode or manual runtime check, using the KKPipeline Runtime Verification action with concrete notes. Static pipeline success is not runtime verification.
+- Mark Runtime `Verified` only after a real PlayMode check, using the KKPipeline `Runtime Verify` confirmation button. Generate automatically resets Runtime to `Pending`; static pipeline success is not runtime verification.
 
 ## Workflow
 
@@ -263,7 +263,7 @@ validation.md
 <!-- ui-pipeline:validation-ledger:end -->
 ```
 
-The pipeline now scaffolds and updates the marker block for Validate / Generate / Verify / Preview. Do not overwrite content outside the markers. Do not save preview screenshots or write screenshot paths. Runtime remains `Pending` unless a PlayMode or manual runtime check explicitly verified behavior and the user records it with `Mark Runtime Verified`. Use `Reset Runtime Pending` after a runtime-affecting change invalidates the old check. Legacy `Runtime: Pass` is migrated to `Verified` on the next ledger write.
+The pipeline now scaffolds and updates the marker block for Validate / Generate / Verify / Preview. Do not overwrite content outside the markers. Runtime remains `Pending` unless a PlayMode check explicitly verified behavior and the user confirms it with `Runtime Verify`. Generate automatically resets Runtime to `Pending`. Legacy `Runtime: Pass` is migrated to `Verified` on the next ledger write.
 
 Report one status:
 

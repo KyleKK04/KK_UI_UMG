@@ -11,7 +11,7 @@ Assets/UI/Source/<PackageId>/          # default Source package path
   -> UIManager.OpenAsync(...)
 ```
 
-Generated-owned 输出是可删除、可覆盖、可重建的产物；需要长期维护的是 Source JSON、生成包根目录下的手写 View / Controller partial 和业务 Service Adapter。
+Generated-owned 输出是可删除、可覆盖、可重建的产物；需要长期维护的是 Source JSON、生成包根目录下的手写 View / Controller partial 和业务 Service Adapter。Prefab 中手调的受支持布局只有通过 KKPipeline 的 `Export` 模式显式采纳回 Source 后才会持久化。
 
 ## 适用目标
 
@@ -19,7 +19,7 @@ KK_UI_UMG 适合这些 Unity 项目：
 
 - 运行时 UI 使用 UGUI，但希望 UI 结构、绑定、事件和资产依赖有稳定的文本源头。
 - 希望 UI 改动可以 code review，而不是只看 Prefab 序列化 diff。
-- 希望让 AI / Codex 从自然语言创建或修改 UI，同时不直接手改 Generated 文件。
+- 希望让 AI / Codex 从自然语言创建或修改 UI，也允许设计者在 Prefab 中微调布局后显式采纳回 Source JSON。
 - 希望 UI 输入链路保持 MVVM-C 边界：View.Generated 转发事件，View partial 负责视觉动画，Controller 写 Store，Binder 刷新 UGUI，UIManager 管生命周期。
 - 希望把 UI 先做成纯显示结构，后续再通过 Service Adapter 接入已有业务代码。
 
@@ -50,7 +50,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 普通用户推荐使用 GitHub Release 中的 tarball。tarball 是正式交付包，不包含 package 开发用 `Tests/`。
 
 ```text
-com.kk.ui-umg-1.0.5.tgz
+com.kk.ui-umg-1.0.6.tgz
 ```
 
 在 Unity Package Manager 中选择：
@@ -58,7 +58,7 @@ com.kk.ui-umg-1.0.5.tgz
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.5.tgz
+  -> com.kk.ui-umg-1.0.6.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -66,7 +66,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.5.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.6.tgz"
   }
 }
 ```
@@ -76,7 +76,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.5"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.6"
   }
 }
 ```
@@ -152,14 +152,14 @@ Git URL 更适合希望跟随源码、调试 package 或查看测试代码的开
    <Generated Parent>/<PackageId>/
    ```
 
-7. 依次运行：
+7. KKPipeline 顶部提供两个模式按钮：
 
    ```text
-   Validate
-   Generate
-   Verify
-   Refresh Preview
+   Import  # 保留原有完整界面；按 Validate、Generate、Verify 流程生成并检查 UGUI
+   Export  # 只显示操作提示和 Export 按钮
    ```
+
+   使用 `Export` 时，先修改并保存生成 Prefab，再在 Project 窗口选中对应 Prefab，最后点击 `Export`。它会同步现有 Source 节点的 `anchorMin`、`anchorMax`、`anchoredPosition`、`sizeDelta` 和已经声明的 layoutComponents；不会导入节点增删、重命名、重挂父节点、pivot、旋转、缩放、文本、图片或任意组件。反向写回后切回 `Import`，再运行 `Validate`、`Generate`、`Verify` 和 `Refresh Preview` 检查往返结果。
 
 8. 运行时打开 UI：
 
@@ -212,7 +212,7 @@ Assets/UI/Source/<PackageId>/
 
 也可以放在项目自定义 Source 根下，例如 `Assets/_Project/UISource/<PackageId>/`。合法规则是：Source package root 在 `Assets/` 或 `Packages/` 下，最后一级文件夹名等于 `packageId`，且不在 `Generated` 文件夹下。
 
-生成包的 generated-owned 子目录中的 C# 和 Prefab 可以删除后重建。如果生成结果不对，应该修改 Source JSON 或 generator，而不是手改生成物；生成包根目录的手写 partial 不属于可重建输出。
+生成包的 generated-owned 子目录中的 C# 和 Prefab 可以删除后重建。如果生成结果不对，应该修改 Source JSON 或 generator。允许在生成 Prefab 中微调受支持布局，但保存后必须在 Project 窗口选中该 Prefab，并通过 KKPipeline 的 `Export` 写回 `layout.json`；其他 Generated 修改不会持久化。生成包根目录的手写 partial 不属于可重建输出。
 
 ### MVVM-C 边界清楚
 
@@ -327,9 +327,11 @@ Editor pipeline 提供：
 
 ```text
 Validate -> Generate -> Verify -> Refresh Preview
+
+Export (select saved Prefab) -> Import / Validate -> Generate -> Verify
 ```
 
-每个 Source package 可以带 `validation.md`，由 pipeline 写入 Validate / Generate / Verify / Preview 状态，方便记录交付状态。Runtime 的规范状态只有 `Pending / Verified`；真实完成 PlayMode 或人工验收后，在 KKPipeline 中填写说明并点击 `Mark Runtime Verified`，需要重新验收时点击 `Reset Runtime Pending`。静态管线步骤不会自动推断 Runtime 已验证；旧版 `Runtime: Pass` 会在下一次管线写入时迁移为 `Verified`。
+每个 Source package 可以带 `validation.md`，由 pipeline 写入 Validate / Generate / Verify / Preview 状态，方便记录交付状态。Runtime 的规范状态只有 `Pending / Verified`；真实完成 PlayMode 验收后点击 KKPipeline 的 `Runtime Verify` 并确认即可记录为 `Verified`。再次运行 `Generate` 会自动恢复为 `Pending`，等待重新验收；旧版 `Runtime: Pass` 会在下一次管线写入时迁移为 `Verified`。
 
 ### 业务接入通过 Service Adapter
 

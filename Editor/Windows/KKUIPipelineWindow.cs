@@ -10,9 +10,17 @@ namespace KK.UI.UMG.Editor.Windows
 {
     public sealed class KKUIPipelineWindow : EditorWindow
     {
+        private enum PipelineMode
+        {
+            Import,
+            Export
+        }
+
         private const string GeneratedParentPrefsKey = "KK_UI_UMG.KKPipeline.GeneratedParent";
         private const string DefaultGeneratedParentPath = "Assets/UI/Generated";
+        private static readonly string[] ModeLabels = { "Import", "Export" };
 
+        [SerializeField] private PipelineMode _mode;
         private string _packageManifestPath = string.Empty;
         private TextAsset _packageManifestAsset;
         private string _generatedParentPath = DefaultGeneratedParentPath;
@@ -27,7 +35,6 @@ namespace KK.UI.UMG.Editor.Windows
         private string _previewPrefabPath;
         private string _previewPackagePath;
         private string _previewGeneratedParentPath;
-        private string _runtimeVerificationNotes = string.Empty;
 
         [MenuItem("KK_UI_UMG/KKPipeline", priority = 0)]
         public static void Open()
@@ -44,6 +51,14 @@ namespace KK.UI.UMG.Editor.Windows
 
         private void OnGUI()
         {
+            _mode = (PipelineMode)GUILayout.Toolbar((int)_mode, ModeLabels, GUILayout.Height(28f));
+            EditorGUILayout.Space(8f);
+            if (_mode == PipelineMode.Export)
+            {
+                DrawExportMode();
+                return;
+            }
+
             EditorGUILayout.LabelField("Package Manifest", EditorStyles.boldLabel);
             DrawManifestSelector();
             EditorGUILayout.Space(6f);
@@ -59,65 +74,10 @@ namespace KK.UI.UMG.Editor.Windows
                 EditorGUILayout.HelpBox(_generatedParentError, MessageType.Warning);
             }
 
-            EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!IsRunnable()))
-            {
-                if (GUILayout.Button("Validate"))
-                {
-                    if (!ValidateBeforeRun())
-                    {
-                        return;
-                    }
-                    _lastResult = new KKUIPipeline().ValidateOnly(_packageManifestPath, GetGeneratedParentPath());
-                    MarkPreviewStale();
-                }
-
-                if (GUILayout.Button("Generate"))
-                {
-                    if (!ValidateBeforeRun())
-                    {
-                        return;
-                    }
-                    _lastResult = new KKUIPipeline().Run(_packageManifestPath, GetGeneratedParentPath());
-                    MarkPreviewStale();
-                }
-
-                if (GUILayout.Button("Verify"))
-                {
-                    if (!ValidateBeforeRun())
-                    {
-                        return;
-                    }
-                    _lastResult = new KKUIPipeline().VerifyOnly(_packageManifestPath, GetGeneratedParentPath());
-                    if (_lastResult.Success)
-                    {
-                        RenderPreview();
-                    }
-                    else
-                    {
-                        MarkPreviewStale();
-                    }
-                }
-
-                if (GUILayout.Button("Refresh Preview"))
-                {
-                    if (!ValidateBeforeRun())
-                    {
-                        return;
-                    }
-                    RenderPreview();
-                }
-            }
-
-            if (GUILayout.Button("Open Report"))
-            {
-                OpenReport();
-            }
-            EditorGUILayout.EndHorizontal();
+            DrawPipelineActions();
 
             DrawResultSummary();
             DrawPreviewPanel();
-            DrawRuntimeVerification();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.MaxHeight(180f));
             if (_lastResult != null)
@@ -147,39 +107,117 @@ namespace KK.UI.UMG.Editor.Windows
             DestroyPreviewTexture();
         }
 
-        private void DrawRuntimeVerification()
+        private void DrawPipelineActions()
         {
-            EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("Runtime Verification", EditorStyles.boldLabel);
-            _runtimeVerificationNotes = EditorGUILayout.TextField("Notes", _runtimeVerificationNotes);
-
+            EditorGUILayout.Space(10f);
+            EditorGUILayout.LabelField("Pipeline & Preview", EditorStyles.boldLabel);
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!IsRunnable() || string.IsNullOrWhiteSpace(_runtimeVerificationNotes)))
+            using (new EditorGUI.DisabledScope(!IsRunnable()))
             {
-                if (GUILayout.Button("Mark Runtime Verified") &&
-                    EditorUtility.DisplayDialog(
-                        "Mark Runtime Verified",
-                        "Confirm that the selected UI package has passed a real PlayMode or manual runtime check.",
-                        "Mark Verified",
-                        "Cancel"))
+                if (GUILayout.Button("Validate"))
                 {
-                    WriteRuntimeStatus(true, "Manual PlayMode", _runtimeVerificationNotes);
+                    if (!ValidateBeforeRun())
+                    {
+                        return;
+                    }
+
+                    _lastResult = new KKUIPipeline().ValidateOnly(_packageManifestPath, GetGeneratedParentPath());
+                    MarkPreviewStale();
+                }
+
+                if (GUILayout.Button("Generate"))
+                {
+                    RunGenerate();
+                }
+
+                if (GUILayout.Button("Verify"))
+                {
+                    if (!ValidateBeforeRun())
+                    {
+                        return;
+                    }
+
+                    _lastResult = new KKUIPipeline().VerifyOnly(_packageManifestPath, GetGeneratedParentPath());
+                    if (_lastResult.Success)
+                    {
+                        RenderPreview();
+                    }
+                    else
+                    {
+                        MarkPreviewStale();
+                    }
+                }
+
+                if (GUILayout.Button("Runtime Verify"))
+                {
+                    RunRuntimeVerify();
+                }
+
+                if (GUILayout.Button("Refresh Preview"))
+                {
+                    if (!ValidateBeforeRun())
+                    {
+                        return;
+                    }
+
+                    RenderPreview();
                 }
             }
 
-            using (new EditorGUI.DisabledScope(!IsRunnable()))
+            if (GUILayout.Button("Open Report"))
             {
-                if (GUILayout.Button("Reset Runtime Pending"))
-                {
-                    WriteRuntimeStatus(false, "Manual", "Runtime behavior requires re-verification.");
-                }
+                OpenReport();
             }
             EditorGUILayout.EndHorizontal();
         }
 
-        private void WriteRuntimeStatus(bool verified, string source, string notes)
+        private void RunGenerate()
         {
             if (!ValidateBeforeRun())
+            {
+                return;
+            }
+
+            _lastResult = new KKUIPipeline().Run(_packageManifestPath, GetGeneratedParentPath());
+            MarkPreviewStale();
+        }
+
+        private void DrawExportMode()
+        {
+            EditorGUILayout.HelpBox(
+                "先修改 Prefab 并保存，然后在 Project 窗口选中对应的 Prefab，点击 Export 即可写回 JSON。",
+                MessageType.Info);
+
+            if (GUILayout.Button("Export", GUILayout.Height(36f)))
+            {
+                RunExport();
+            }
+        }
+
+        private void RunExport()
+        {
+            var prefabPath = AssetDatabase.GetAssetPath(Selection.activeObject);
+            var result = new KKUIPipeline().ExportPrefab(prefabPath, _packageManifestPath);
+            if (result.Success)
+            {
+                MarkPreviewStale();
+            }
+
+            var info = result.Issues?.FirstOrDefault(issue => issue.Code == "P2J001");
+            var message = result.Success
+                ? info?.Message ?? "Export completed."
+                : result.Error ?? result.Issues?.FirstOrDefault()?.Message ?? "Export failed.";
+            EditorUtility.DisplayDialog(result.Success ? "Export Complete" : "Export Failed", message, "OK");
+        }
+
+        private void RunRuntimeVerify()
+        {
+            if (!ValidateBeforeRun() ||
+                !EditorUtility.DisplayDialog(
+                    "Runtime Verify",
+                    "Confirm that the selected UI package passed a real PlayMode runtime check.",
+                    "Verify",
+                    "Cancel"))
             {
                 return;
             }
@@ -187,11 +225,15 @@ namespace KK.UI.UMG.Editor.Windows
             try
             {
                 var context = KKUIPipelineContext.Load(_packageManifestPath, GetGeneratedParentPath());
-                new ValidationLedgerWriter().WriteRuntimeStatus(context, verified, source, notes);
+                new ValidationLedgerWriter().WriteRuntimeStatus(
+                    context,
+                    true,
+                    "Manual PlayMode",
+                    "User confirmed the selected UI passed a PlayMode runtime check.");
                 _lastResult = new KKUIPipelineResult
                 {
-                    Operation = "Runtime",
-                    Status = verified ? "Verified" : "Pending",
+                    Operation = "Runtime Verify",
+                    Status = "Verified",
                     Success = true
                 };
                 AssetDatabase.Refresh();
@@ -673,6 +715,11 @@ namespace KK.UI.UMG.Editor.Windows
                     return "Run Verify to check the generated prefab and refresh Preview.";
                 case "Verify":
                     return "Add UIManager to the scene, register any required services, then call OpenAsync.";
+                case "Runtime Verify":
+                    return "Runtime verification is recorded until the next Generate.";
+                case "Prefab to JSON":
+                case "Export":
+                    return "Run Generate to verify that the captured layout round-trips cleanly.";
                 default:
                     return "Continue with the next pipeline step.";
             }

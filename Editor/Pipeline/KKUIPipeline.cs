@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEngine;
 using KK.UI.UMG.Editor.Generators;
 using KK.UI.UMG.Editor.Validators;
+using KK.UI.UMG.Internal;
 
 namespace KK.UI.UMG.Editor.Pipeline
 {
@@ -120,6 +123,134 @@ namespace KK.UI.UMG.Editor.Pipeline
             {
                 return new KKUIPipelineResult { Operation = "Verify", Status = "Failed", Success = false, Error = ex.Message };
             }
+        }
+
+        public KKUIPipelineResult PrefabToJson(string packageManifestPath, string generatedParentPath = null)
+        {
+            try
+            {
+                var context = KKUIPipelineContext.Load(packageManifestPath, generatedParentPath);
+                Validate(context);
+                if (context.Issues.Any(issue => issue.Severity == KKUIPipelineIssueSeverity.Error))
+                {
+                    return KKUIPipelineResult.FromContext("Prefab to JSON", context, Array.Empty<string>());
+                }
+
+                AssetDatabase.SaveAssets();
+                var changedNodes = new PrefabLayoutExporter().Export(context);
+                var layoutPath = Path.Combine(context.SourceRoot, context.Package.Manifests.Layout);
+                context.Add(
+                    KKUIPipelineIssueSeverity.Info,
+                    "P2J001",
+                    changedNodes.Count == 0
+                        ? "Prefab layout already matches layout.json; no file was written."
+                        : $"Captured {changedNodes.Count} layout node(s) from the saved prefab into '{AssetManifestUtility.ToAssetPath(layoutPath)}'.");
+                return KKUIPipelineResult.FromContext(
+                    "Prefab to JSON",
+                    context,
+                    changedNodes.Count == 0 ? Array.Empty<string>() : new[] { layoutPath });
+            }
+            catch (Exception ex)
+            {
+                return new KKUIPipelineResult
+                {
+                    Operation = "Prefab to JSON",
+                    Status = "Failed",
+                    Success = false,
+                    Error = ex.Message
+                };
+            }
+        }
+
+        public KKUIPipelineResult ExportPrefab(string prefabAssetPath, string fallbackPackageManifestPath = null)
+        {
+            try
+            {
+                var prefabPath = AssetManifestUtility.NormalizeAssetPath(prefabAssetPath);
+                if (string.IsNullOrWhiteSpace(prefabPath) ||
+                    !prefabPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Select a generated Prefab in the Project window before clicking Export.");
+                }
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                var marker = prefab != null ? prefab.GetComponent<GeneratedAssetMarker>() : null;
+                if (marker == null || string.IsNullOrWhiteSpace(marker.PackageId))
+                {
+                    throw new InvalidOperationException("The selected asset is not a KKPipeline generated Prefab.");
+                }
+
+                var generatedParentPath = ResolveGeneratedParentPath(prefabPath, marker.PackageId);
+                var packageManifestPath = ResolveSourceManifestPath(
+                    prefabPath,
+                    generatedParentPath,
+                    marker,
+                    fallbackPackageManifestPath);
+                var result = PrefabToJson(packageManifestPath, generatedParentPath);
+                result.Operation = "Export";
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return new KKUIPipelineResult
+                {
+                    Operation = "Export",
+                    Status = "Failed",
+                    Success = false,
+                    Error = ex.Message
+                };
+            }
+        }
+
+        private static string ResolveGeneratedParentPath(string prefabPath, string packageId)
+        {
+            var prefabsRoot = AssetManifestUtility.NormalizeAssetPath(Path.GetDirectoryName(prefabPath));
+            var generatedRoot = AssetManifestUtility.NormalizeAssetPath(Path.GetDirectoryName(prefabsRoot));
+            var generatedParent = AssetManifestUtility.NormalizeAssetPath(Path.GetDirectoryName(generatedRoot));
+            if (!string.Equals(Path.GetFileName(prefabsRoot), "Prefabs", StringComparison.Ordinal) ||
+                !string.Equals(Path.GetFileName(generatedRoot), packageId, StringComparison.Ordinal) ||
+                !string.Equals(Path.GetFileName(prefabPath), $"{packageId}View.prefab", StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(generatedParent))
+            {
+                throw new InvalidOperationException(
+                    $"The selected Prefab must be '{packageId}/Prefabs/{packageId}View.prefab'.");
+            }
+
+            return generatedParent;
+        }
+
+        private static string ResolveSourceManifestPath(
+            string prefabPath,
+            string generatedParentPath,
+            GeneratedAssetMarker marker,
+            string fallbackPackageManifestPath)
+        {
+            var candidates = new[] { marker.SourceManifestPath, fallbackPackageManifestPath }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(AssetManifestUtility.NormalizeAssetPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    var context = KKUIPipelineContext.Load(candidate, generatedParentPath);
+                    var expectedPrefabPath = AssetManifestUtility.ToAssetPath(
+                        Path.Combine(context.GeneratedRoot, "Prefabs", $"{context.Package.PackageId}View.prefab"));
+                    if (string.Equals(context.Package.PackageId, marker.PackageId, StringComparison.Ordinal) &&
+                        string.Equals(expectedPrefabPath, prefabPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return candidate;
+                    }
+                }
+                catch
+                {
+                    // Try the next known Source manifest.
+                }
+            }
+
+            throw new InvalidOperationException(
+                "Cannot resolve the Source package for the selected Prefab. Switch to Import, select its package.json, run Generate once, then retry Export.");
         }
 
         private static bool IsCompileDeferred(Exception ex)
