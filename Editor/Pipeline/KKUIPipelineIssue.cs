@@ -22,6 +22,8 @@ namespace KK.UI.UMG.Editor.Pipeline
             {
                 case "SRC001":
                     return "Place the Source package under Assets/ or Packages/, make the final folder name match packageId, and do not put it under a Generated folder.";
+                case "SRC009":
+                    return "Keep validation.md ledger markers and canonical statuses. Runtime uses Pending or Verified; legacy Runtime Pass is migrated automatically.";
                 case "TXT001":
                     return "Move static Text copy into strings.json and reference it with layout.json locKey.";
                 case "TXT002":
@@ -59,6 +61,10 @@ namespace KK.UI.UMG.Editor.Pipeline
                     return "Fix requiredServices so each service has a valid unique property name and UI-facing type.";
                 case "GENPENDING":
                     return "Wait for Unity compilation; prefab generation will continue automatically.";
+                case "VER036":
+                    return "Move handwritten View or Controller partials out of the generated-owned Scripts folder and into <Generated Parent>/<PackageId>/.";
+                case "VER037":
+                    return "Regenerate the View script so its generated class declaration remains partial.";
                 default:
                     return null;
             }

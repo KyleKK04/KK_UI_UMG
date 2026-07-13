@@ -20,6 +20,9 @@ When a user has just imported the package and wants to create their own UI, this
 - New UI authoring is UI-first by default. Do not add `requiredServices` until the user asks to connect business data.
 - If a UI needs existing business data or commands, declare `codegen.requiredServices` and create a UI-facing service adapter; do not put business model types or query logic into Source JSON.
 - Handwritten business Controller partials live at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`, next to `Scripts/`, `Prefabs/`, `Reports/`, and `Assets/`. Do not create `Controllers/`, `Business/`, or `Partial/` subfolders, and do not place handwritten partials inside the generated-owned `Scripts/` folder.
+- Optional handwritten visual transition partials live at `<Generated Parent>/<PackageId>/<ViewClassName>.cs`. Write them only when the user requests animation; never put them in generated-owned `Scripts/` and never edit `<ViewClassName>.Generated.cs`.
+- Lifecycle animation belongs in the View partial through Open / Show / Hide / Close transition overrides. Do not put animation in Controller partials, Binder, Store, or Source JSON.
+- Pass the framework `CancellationToken` through every awaited animation. View transition code may change visual properties only and must not call UIManager or Controller lifecycle methods.
 - If stale Generated scripts would make a generated service property unavailable, handwritten Controller code may call `RequireService<T>()` directly while keeping `codegen.requiredServices` declared.
 - Static UI copy uses `layout.json` `locKey` plus `strings.json`. Static titles, labels, button text, placeholders, section headers, and fixed empty prompts do not need `bindings.json` fields, Store fields, Controller initialization, or Binder refresh.
 - Dynamic Text enters `bindings.json` only when it changes at runtime, comes from business data, service callbacks, counts, progress, status, player data, item data, task data, or list item data.
@@ -41,6 +44,8 @@ When a user has just imported the package and wants to create their own UI, this
 - For frequently toggled UI such as inventory, pause, map, settings, or HUD panels, recommend `PreloadAsync` plus `HideAsync` / `ShowAsync` instead of repeatedly destroying and reopening the panel.
 - Store writes continue to use generic `Store.Update<T>`; do not invent `UpdateInt` / `UpdateFloat` / `UpdateBool` APIs.
 - Run Validate / Generate / Verify when Unity Editor access is available; otherwise tell the user exactly what remains to run.
+- Runtime ledger output uses only `Pending` or `Verified`. Legacy `Runtime: Pass` is read as `Verified`; never author new Runtime `Pass` rows.
+- Mark Runtime `Verified` only after a real PlayMode or manual runtime check, using the KKPipeline Runtime Verification action with concrete notes. Static pipeline success is not runtime verification.
 
 ## Workflow
 
@@ -56,6 +61,7 @@ When a user has just imported the package and wants to create their own UI, this
 8. Report the delivery status, any handwritten Controller handlers still needed, and the runtime setup note: add `KK.UI.UMG.UIManager` to a scene GameObject before calling `UIManager.Instance.OpenAsync("<PackageId>")`.
 9. Include the minimal `UIManager` call pattern for the generated prefab: `await UIManager.Instance.OpenAsync("<PackageId>");`.
 10. When reporting Store fields, list dynamic Store fields only. Static locKey copy is not a Store field.
+11. If the user requested lifecycle animation, add the handwritten View partial beside `Scripts/` only after generated component references are known, then run the runtime transition checks.
 
 ### Modify UI
 
@@ -98,11 +104,14 @@ For a newly imported package, explain this runtime setup whenever the user asks 
 - Loads generated prefabs through Addressables key `UI/<PackageId>/<PackageId>View`.
 - Instantiates the prefab under the UI root.
 - Creates one Controller instance per open UI lifecycle through generated Controller factory registration.
-- Calls Controller lifecycle in order: `BindView`, `OnPreOpen`, `Initialize`, `Flush`, `OnOpened`, `OnActivated`.
+- Calls Controller lifecycle in order around the View transition: `BindView`, `OnPreOpen`, `Initialize`, `Flush`, `OnOpened`, await Open transition, then `OnActivated` only if the View is the ready top layer.
 - Maintains open / hidden state, active and hidden panel instances, Addressables handles, and top-first layer stack.
 - Preloads generated prefab assets through `PreloadAsync`.
 - Hides high-frequency panels through `HideAsync` without disposing Controller, destroying View, clearing Store, or releasing Addressables.
 - Shows hidden panels through `ShowAsync` without re-instantiating, rebinding, or reinitializing.
+- Awaits optional View Open / Show / Hide / Close transitions, serializes opposite commands for the same View, and allows different View instances to transition concurrently.
+- Keeps transition targets non-interactable, prevents click-through, and activates only a transition-complete top layer.
+- Uses a five-second real-time transition timeout by default. Ordinary transition exceptions are logged and degraded to the target state; timeouts cancel and roll back before throwing `TimeoutException`.
 - Releases Addressables handles and disposes the Controller on `CloseAsync` / `ReleaseAsync`.
 - Provides `IsOpen`, `GetState`, `GetTopLayer`, and `GetLayerStack`.
 - Provides service registration for business adapters: `RegisterService<T>`, `TryGetService<T>`, `UnregisterService<T>`, and `ClearServices`.
@@ -254,7 +263,7 @@ validation.md
 <!-- ui-pipeline:validation-ledger:end -->
 ```
 
-The pipeline now scaffolds and updates the marker block for Validate / Generate / Verify / Preview. Do not overwrite content outside the markers. Do not save preview screenshots or write screenshot paths. Runtime remains `Pending` unless a PlayMode or manual runtime check explicitly verified behavior.
+The pipeline now scaffolds and updates the marker block for Validate / Generate / Verify / Preview. Do not overwrite content outside the markers. Do not save preview screenshots or write screenshot paths. Runtime remains `Pending` unless a PlayMode or manual runtime check explicitly verified behavior and the user records it with `Mark Runtime Verified`. Use `Reset Runtime Pending` after a runtime-affecting change invalidates the old check. Legacy `Runtime: Pass` is migrated to `Verified` on the next ledger write.
 
 Report one status:
 

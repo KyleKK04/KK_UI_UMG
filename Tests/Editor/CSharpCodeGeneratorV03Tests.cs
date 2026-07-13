@@ -124,6 +124,21 @@ namespace KK.UI.UMG.Editor.Tests
         }
 
         [Test]
+        public void GeneratedViewExposesNestedPanelRectTransformWithoutDuplicatingControlsOrRoot()
+        {
+            var context = CreateContext();
+            context.Layout.Root.Children.Add(new UiLayoutNode { Type = "Panel", Id = "ContentPanel" });
+
+            var source = InvokeGenerator("GenerateView", context);
+
+            Assert.That(source, Does.Contain("[SerializeField] private RectTransform _contentPanel;"));
+            Assert.That(source, Does.Contain("public RectTransform ContentPanel => _contentPanel;"));
+            Assert.That(source, Does.Contain("[SerializeField] private Button _confirmButton;"));
+            Assert.That(source, Does.Not.Contain("RectTransform _confirmButton"));
+            Assert.That(source, Does.Not.Contain("RectTransform _root"));
+        }
+
+        [Test]
         public void GeneratedRegistrationRegistersLocalizationTable()
         {
             var source = InvokeGenerator("GenerateControllerRegistration", CreateContextWithLocalization());

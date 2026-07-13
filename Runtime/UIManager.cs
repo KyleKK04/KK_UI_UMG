@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -16,8 +17,10 @@ namespace KK.UI.UMG
 
         private readonly Dictionary<string, UIState> _states = new Dictionary<string, UIState>();
         private readonly Dictionary<string, Task<UIViewBase>> _openingTasks = new Dictionary<string, Task<UIViewBase>>();
+        private readonly Dictionary<string, Task<UIViewBase>> _showingTasks = new Dictionary<string, Task<UIViewBase>>();
+        private readonly Dictionary<string, Task> _hidingTasks = new Dictionary<string, Task>();
         private readonly Dictionary<string, Task> _closingTasks = new Dictionary<string, Task>();
-        private readonly HashSet<string> _pendingClose = new HashSet<string>();
+        private readonly Dictionary<string, SemaphoreSlim> _operationGates = new Dictionary<string, SemaphoreSlim>();
         private readonly Dictionary<string, Func<UIControllerBase>> _controllerFactories = new Dictionary<string, Func<UIControllerBase>>();
         private readonly List<UIBusRoute> _busRoutes = new List<UIBusRoute>();
         private readonly AddressablesUILoader _loader = new AddressablesUILoader(GetAddressablesKey);
@@ -26,8 +29,20 @@ namespace KK.UI.UMG
         private readonly UIServiceRegistry _services = new UIServiceRegistry();
 
         [SerializeField] private string _startupCulture = "zh-Hans";
+        [SerializeField, Min(0.01f)] private float _transitionTimeoutSeconds = 5f;
         private RectTransform _uiRoot;
         private UIBusRouter _busRouter;
+        private bool _isDestroying;
+
+        internal float TransitionTimeoutSeconds
+        {
+            get => _transitionTimeoutSeconds;
+            set => _transitionTimeoutSeconds = Mathf.Max(0.01f, value);
+        }
+
+        internal Func<string, Task<GameObject>> PrefabLoaderOverride { get; set; }
+        internal Action<string> PrefabReleaseOverride { get; set; }
+        internal Func<string, UIControllerBase> ControllerFactoryOverride { get; set; }
 
         private void Awake()
         {
@@ -48,6 +63,7 @@ namespace KK.UI.UMG
 
         private void OnDestroy()
         {
+            _isDestroying = true;
             _busRouter?.Dispose();
             _panels.DestroyAll();
             _loader.ReleaseAll();
@@ -60,104 +76,41 @@ namespace KK.UI.UMG
 
         public Task PreloadAsync(string systemId)
         {
-            if (IsOpen(systemId) || GetState(systemId) == UIState.Hidden)
+            EnsureSystemId(systemId);
+            if (_panels.TryGetActive(systemId, out _) || _panels.TryGetHidden(systemId, out _))
             {
                 return Task.CompletedTask;
             }
 
-            return _loader.PreloadAsync(systemId);
+            return LoadPrefabAsync(systemId);
         }
 
         public Task<UIViewBase> OpenAsync(string systemId, MessagePayload payload = null)
         {
-            if (_panels.TryGetActive(systemId, out var active))
-            {
-                return Task.FromResult(active.View);
-            }
-
-            if (_panels.TryGetHidden(systemId, out _))
-            {
-                return ShowAsync(systemId, payload);
-            }
-
-            if (_openingTasks.TryGetValue(systemId, out var openingTask))
-            {
-                return openingTask;
-            }
-
-            if (_closingTasks.TryGetValue(systemId, out var closingTask))
-            {
-                return OpenAfterCloseAsync(systemId, payload, closingTask);
-            }
-
-            var task = OpenCoreAsync(systemId, payload);
-            _openingTasks[systemId] = task;
-            return task;
+            EnsureSystemId(systemId);
+            return StartTrackedViewOperation(
+                _openingTasks,
+                systemId,
+                () => RunSerializedAsync(systemId, () => OpenOrShowCoreAsync(systemId, payload)));
         }
 
-        public async Task<UIViewBase> ShowAsync(string systemId, MessagePayload payload = null)
+        public Task<UIViewBase> ShowAsync(string systemId, MessagePayload payload = null)
         {
-            if (_panels.TryGetActive(systemId, out var active))
-            {
-                return active.View;
-            }
-
-            if (_closingTasks.TryGetValue(systemId, out var closingTask))
-            {
-                await closingTask;
-            }
-
-            if (!_panels.MoveHiddenToActive(systemId, out var panel))
-            {
-                return await OpenAsync(systemId, payload);
-            }
-
-            var previousTop = _layers.Top;
-            _layers.AssignSortingOrder(panel.Root);
-            panel.Root.SetActive(true);
-            _layers.Push(systemId, panel.View);
-            if (previousTop.view != null && _panels.TryGetActive(previousTop.systemId, out var previousPanel))
-            {
-                previousPanel.Controller.OnDeactivated();
-            }
-
-            panel.Controller.OnShown(payload);
-            panel.Controller.OnActivated();
-            _states[systemId] = UIState.Open;
-            return panel.View;
+            EnsureSystemId(systemId);
+            return StartTrackedViewOperation(
+                _showingTasks,
+                systemId,
+                () => RunSerializedAsync(systemId, () => OpenOrShowCoreAsync(systemId, payload)));
         }
 
-        public async Task HideAsync(string systemId)
+        public Task HideAsync(string systemId)
         {
-            if (_openingTasks.TryGetValue(systemId, out var openingTask))
-            {
-                await openingTask;
-            }
-
-            if (GetState(systemId) != UIState.Open)
-            {
-                return;
-            }
-
-            var top = _layers.Top;
-            if (top.systemId != systemId)
-            {
-                Debug.LogWarning($"[UIManager] HideAsync('{systemId}') ignored: not top layer. Hide top-first.");
-                return;
-            }
-
-            if (!_panels.MoveActiveToHidden(systemId, out var panel))
-            {
-                _states[systemId] = UIState.Unloaded;
-                return;
-            }
-
-            panel.Controller.OnDeactivated();
-            _layers.Pop(systemId);
-            ActivateTopController();
-            panel.Root.SetActive(false);
-            panel.Controller.OnHidden();
-            _states[systemId] = UIState.Hidden;
+            EnsureSystemId(systemId);
+            var acceptedWhileQueued = IsQueuedTopFirstRequestAccepted(systemId);
+            return StartTrackedOperation(
+                _hidingTasks,
+                systemId,
+                () => RunSerializedAsync(systemId, () => HideCoreAsync(systemId, acceptedWhileQueued)));
         }
 
         public Task CloseAsync(string systemId)
@@ -165,54 +118,24 @@ namespace KK.UI.UMG
             return CloseAsync(systemId, UICloseMode.Destroy);
         }
 
-        public async Task CloseAsync(string systemId, UICloseMode mode)
+        public Task CloseAsync(string systemId, UICloseMode mode)
         {
+            EnsureSystemId(systemId);
             if (mode == UICloseMode.Hide)
             {
-                await HideAsync(systemId);
-                return;
+                return HideAsync(systemId);
             }
 
-            if (GetState(systemId) == UIState.Loading)
-            {
-                _pendingClose.Add(systemId);
-                return;
-            }
-
-            if (_closingTasks.TryGetValue(systemId, out var closingTask))
-            {
-                await closingTask;
-                return;
-            }
-
-            var task = CloseCoreAsync(systemId);
-            _closingTasks[systemId] = task;
-            try
-            {
-                await task;
-            }
-            finally
-            {
-                _closingTasks.Remove(systemId);
-            }
+            var acceptedWhileQueued = IsQueuedTopFirstRequestAccepted(systemId);
+            return StartTrackedOperation(
+                _closingTasks,
+                systemId,
+                () => RunSerializedAsync(systemId, () => CloseCoreAsync(systemId, acceptedWhileQueued)));
         }
 
-        public async Task ReleaseAsync(string systemId)
+        public Task ReleaseAsync(string systemId)
         {
-            if (GetState(systemId) == UIState.Open)
-            {
-                await CloseAsync(systemId);
-                return;
-            }
-
-            if (_panels.RemoveHidden(systemId, out var hidden))
-            {
-                ReleasePanel(systemId, hidden, false);
-                return;
-            }
-
-            _loader.Release(systemId);
-            _states[systemId] = UIState.Unloaded;
+            return CloseAsync(systemId, UICloseMode.Destroy);
         }
 
         public bool IsOpen(string systemId)
@@ -255,21 +178,39 @@ namespace KK.UI.UMG
             _services.Clear();
         }
 
-        private async Task<UIViewBase> OpenAfterCloseAsync(string systemId, MessagePayload payload, Task closingTask)
+        private async Task<UIViewBase> OpenOrShowCoreAsync(string systemId, MessagePayload payload)
         {
-            await closingTask;
-            return await OpenAsync(systemId, payload);
+            if (_panels.TryGetActive(systemId, out var active))
+            {
+                return active.View;
+            }
+
+            if (_panels.TryGetHidden(systemId, out _))
+            {
+                return await ShowCoreAsync(systemId, payload);
+            }
+
+            return await OpenCoreAsync(systemId, payload);
         }
 
         private async Task<UIViewBase> OpenCoreAsync(string systemId, MessagePayload payload)
         {
             _states[systemId] = UIState.Loading;
+            var managerCancellation = destroyCancellationToken;
             GameObject instance = null;
             UIControllerBase controller = null;
+            UIPanelInstance panel = null;
             var pushedToLayerStack = false;
+
             try
             {
-                var prefab = await _loader.LoadPrefabAsync(systemId);
+                var prefab = await LoadPrefabAsync(systemId);
+                managerCancellation.ThrowIfCancellationRequested();
+                if (prefab == null)
+                {
+                    throw new InvalidOperationException($"UI prefab loader returned null for '{systemId}'.");
+                }
+
                 instance = Instantiate(prefab, GetOrCreateUiRoot());
                 instance.SetActive(false);
                 _layers.AssignSortingOrder(instance);
@@ -285,7 +226,7 @@ namespace KK.UI.UMG
                 controller.UIManager = this;
                 controller.BindView(view);
 
-                var panel = new UIPanelInstance(systemId, instance, view, controller);
+                panel = new UIPanelInstance(systemId, instance, view, controller);
                 _panels.AddActive(panel);
                 controller.OnPreOpen();
                 controller.Initialize(payload);
@@ -293,169 +234,387 @@ namespace KK.UI.UMG
 
                 instance.SetActive(true);
                 var previousTop = _layers.Top;
-                _layers.Push(systemId, view);
-                pushedToLayerStack = true;
                 if (previousTop.view != null && _panels.TryGetActive(previousTop.systemId, out var previousPanel))
                 {
-                    previousPanel.Controller.OnDeactivated();
+                    DeactivateIfActive(previousPanel, false);
                 }
 
+                _layers.Push(systemId, view);
+                pushedToLayerStack = true;
+                view.SetInteraction(false, true);
                 controller.OnOpened();
-                controller.OnActivated();
-                _states[systemId] = UIState.Open;
-                if (_pendingClose.Remove(systemId))
-                {
-                    await CloseAsync(systemId);
-                    return null;
-                }
+                await RunTransitionAsync(systemId, "Open", view, view.PlayOpenTransitionAsync);
 
+                _states[systemId] = UIState.Open;
+                ActivateIfReadyTop();
                 return view;
             }
             catch
             {
-                if (pushedToLayerStack)
-                {
-                    _layers.Pop(systemId);
-                }
-
-                _panels.Remove(systemId);
-                _states[systemId] = UIState.Unloaded;
-                _pendingClose.Remove(systemId);
-                try
-                {
-                    controller?.Dispose();
-                }
-                finally
-                {
-                    DestroyObject(instance);
-                    _loader.Release(systemId);
-                }
-
+                CleanupFailedPanel(systemId, panel, instance, controller, pushedToLayerStack);
                 throw;
-            }
-            finally
-            {
-                _openingTasks.Remove(systemId);
             }
         }
 
-        private Task CloseCoreAsync(string systemId)
+        private async Task<UIViewBase> ShowCoreAsync(string systemId, MessagePayload payload)
         {
-            var state = GetState(systemId);
-            if (state == UIState.Hidden)
+            if (!_panels.MoveHiddenToActive(systemId, out var panel))
+            {
+                return await OpenCoreAsync(systemId, payload);
+            }
+
+            _states[systemId] = UIState.Showing;
+            try
+            {
+                _layers.AssignSortingOrder(panel.Root);
+                panel.Root.SetActive(true);
+                var previousTop = _layers.Top;
+                if (previousTop.view != null && _panels.TryGetActive(previousTop.systemId, out var previousPanel))
+                {
+                    DeactivateIfActive(previousPanel, false);
+                }
+
+                _layers.Push(systemId, panel.View);
+                panel.View.SetInteraction(false, true);
+                panel.Controller.OnShown(payload);
+                await RunTransitionAsync(systemId, "Show", panel.View, panel.View.PlayShowTransitionAsync);
+
+                _states[systemId] = UIState.Open;
+                ActivateIfReadyTop();
+                return panel.View;
+            }
+            catch (TimeoutException)
+            {
+                RollbackShow(systemId, panel, true);
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                CleanupCancelledPanel(systemId, panel);
+                throw;
+            }
+            catch
+            {
+                RollbackShow(systemId, panel, true);
+                throw;
+            }
+        }
+
+        private async Task HideCoreAsync(string systemId, bool acceptedWhileQueued)
+        {
+            if (GetState(systemId) != UIState.Open)
+            {
+                return;
+            }
+
+            if (!_layers.IsTop(systemId) && !acceptedWhileQueued)
+            {
+                Debug.LogWarning($"[UIManager] HideAsync('{systemId}') ignored: not top layer. Hide top-first.");
+                return;
+            }
+
+            if (!_panels.TryGetActive(systemId, out var panel))
+            {
+                _states[systemId] = UIState.Unloaded;
+                return;
+            }
+
+            _states[systemId] = UIState.Hiding;
+            try
+            {
+                DeactivateIfActive(panel, _layers.IsTop(systemId));
+                await RunTransitionAsync(systemId, "Hide", panel.View, panel.View.PlayHideTransitionAsync);
+            }
+            catch (TimeoutException)
+            {
+                RollbackToOpen(systemId);
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                CleanupCancelledPanel(systemId, panel);
+                throw;
+            }
+            catch
+            {
+                RollbackToOpen(systemId);
+                throw;
+            }
+
+            _layers.Remove(systemId);
+            _panels.MoveActiveToHidden(systemId, out _);
+            panel.Root.SetActive(false);
+            _states[systemId] = UIState.Hidden;
+            try
+            {
+                panel.Controller.OnHidden();
+            }
+            finally
+            {
+                ActivateIfReadyTop();
+            }
+        }
+
+        private async Task CloseCoreAsync(string systemId, bool acceptedWhileQueued)
+        {
+            if (GetState(systemId) == UIState.Hidden)
             {
                 if (_panels.RemoveHidden(systemId, out var hidden))
                 {
-                    ReleasePanel(systemId, hidden, false);
+                    ReleaseHiddenPanel(systemId, hidden);
+                }
+                else
+                {
+                    ReleasePrefab(systemId);
+                    _states[systemId] = UIState.Unloaded;
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
-            if (state != UIState.Open)
+            if (GetState(systemId) != UIState.Open)
             {
-                return Task.CompletedTask;
+                if (GetState(systemId) == UIState.Unloaded)
+                {
+                    ReleasePrefab(systemId);
+                }
+
+                return;
             }
 
-            var top = _layers.Top;
-            if (top.systemId != systemId)
+            if (!_layers.IsTop(systemId) && !acceptedWhileQueued)
             {
                 Debug.LogWarning($"[UIManager] CloseAsync('{systemId}') ignored: not top layer. Close top-first.");
-                return Task.CompletedTask;
+                return;
             }
 
-            if (!_panels.RemoveActive(systemId, out var panel))
+            if (!_panels.TryGetActive(systemId, out var panel))
             {
                 _states[systemId] = UIState.Unloaded;
-                return Task.CompletedTask;
+                return;
             }
 
             _states[systemId] = UIState.Closing;
-            Exception closeException = null;
             try
             {
+                DeactivateIfActive(panel, _layers.IsTop(systemId));
                 panel.Controller.OnPreClose();
-                panel.Controller.Close();
+                await RunTransitionAsync(systemId, "Close", panel.View, panel.View.PlayCloseTransitionAsync);
             }
-            catch (Exception ex)
+            catch (TimeoutException)
             {
-                closeException = ex;
+                RollbackToOpen(systemId);
+                throw;
             }
-            finally
+            catch (OperationCanceledException)
             {
-                _layers.Pop(systemId);
-                try
-                {
-                    panel.Controller.OnDeactivated();
-                    ActivateTopController();
-                    panel.Controller.OnClosed();
-                }
-                catch (Exception ex)
-                {
-                    if (closeException == null)
-                    {
-                        closeException = ex;
-                    }
-                }
-
-                try
-                {
-                    panel.Controller.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    if (closeException == null)
-                    {
-                        closeException = ex;
-                    }
-                }
-
-                DestroyObject(panel.Root);
-                _loader.Release(systemId);
-                _states[systemId] = UIState.Unloaded;
+                CleanupCancelledPanel(systemId, panel);
+                throw;
             }
-
-            if (closeException != null)
+            catch
             {
-                return Task.FromException(closeException);
+                RollbackToOpen(systemId);
+                throw;
             }
 
-            return Task.CompletedTask;
+            CommitActiveClose(systemId, panel);
         }
 
-        private void ReleasePanel(string systemId, UIPanelInstance panel, bool callDeactivated)
+        internal async Task RunTransitionAsync(
+            string systemId,
+            string phase,
+            UIViewBase view,
+            Func<CancellationToken, Task> transition)
+        {
+            if (view == null)
+            {
+                throw new ArgumentNullException(nameof(view));
+            }
+
+            if (transition == null)
+            {
+                throw new ArgumentNullException(nameof(transition));
+            }
+
+            var managerCancellation = destroyCancellationToken;
+            var viewCancellation = view.destroyCancellationToken;
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(managerCancellation, viewCancellation);
+            using var timeoutCancellation = new CancellationTokenSource();
+
+            Task transitionTask;
+            try
+            {
+                transitionTask = transition(linked.Token) ?? Task.CompletedTask;
+            }
+            catch (OperationCanceledException) when (managerCancellation.IsCancellationRequested || viewCancellation.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogTransitionException(systemId, phase, view, ex);
+                return;
+            }
+
+            var timeout = TimeSpan.FromSeconds(Mathf.Max(0.01f, _transitionTimeoutSeconds));
+            var timeoutTask = Task.Delay(timeout, timeoutCancellation.Token);
+            var destroyedTask = Task.Delay(Timeout.Infinite, linked.Token);
+            var completed = await Task.WhenAny(transitionTask, timeoutTask, destroyedTask);
+
+            if (completed == transitionTask)
+            {
+                timeoutCancellation.Cancel();
+                try
+                {
+                    await transitionTask;
+                }
+                catch (OperationCanceledException) when (managerCancellation.IsCancellationRequested || viewCancellation.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    LogTransitionException(systemId, phase, view, ex);
+                }
+
+                return;
+            }
+
+            timeoutCancellation.Cancel();
+            if (managerCancellation.IsCancellationRequested || viewCancellation.IsCancellationRequested || completed == destroyedTask)
+            {
+                ObserveLateFault(transitionTask);
+                var cancellation = viewCancellation.IsCancellationRequested ? viewCancellation : managerCancellation;
+                throw new OperationCanceledException($"UI transition '{systemId}/{phase}' was cancelled because its owner was destroyed.", cancellation);
+            }
+
+            CancelWithoutMasking(linked);
+            ObserveLateFault(transitionTask);
+            throw new TimeoutException($"UI transition '{systemId}/{phase}' on '{view.GetType().Name}' exceeded {_transitionTimeoutSeconds:0.###} seconds.");
+        }
+
+        private void DeactivateIfActive(UIPanelInstance panel, bool blocksRaycasts)
+        {
+            panel.View.SetInteraction(false, blocksRaycasts);
+            if (!panel.IsActivated)
+            {
+                return;
+            }
+
+            panel.IsActivated = false;
+            panel.Controller.OnDeactivated();
+        }
+
+        private void ActivateIfReadyTop()
+        {
+            var top = _layers.Top;
+            if (top.view == null || !_panels.TryGetActive(top.systemId, out var panel))
+            {
+                return;
+            }
+
+            if (GetState(top.systemId) != UIState.Open)
+            {
+                panel.View.SetInteraction(false, true);
+                return;
+            }
+
+            panel.View.SetInteraction(true, true);
+            if (panel.IsActivated)
+            {
+                return;
+            }
+
+            panel.IsActivated = true;
+            panel.Controller.OnActivated();
+        }
+
+        private void RollbackShow(string systemId, UIPanelInstance panel, bool callHidden)
+        {
+            _layers.Remove(systemId);
+            _panels.MoveActiveToHidden(systemId, out _);
+            if (panel.Root != null)
+            {
+                panel.Root.SetActive(false);
+            }
+
+            _states[systemId] = UIState.Hidden;
+            if (callHidden)
+            {
+                TryLifecycle(panel.Controller.OnHidden);
+            }
+
+            TryActivateTop();
+        }
+
+        private void RollbackToOpen(string systemId)
+        {
+            _states[systemId] = UIState.Open;
+            TryActivateTop();
+        }
+
+        private void CleanupFailedPanel(
+            string systemId,
+            UIPanelInstance panel,
+            GameObject instance,
+            UIControllerBase controller,
+            bool pushedToLayerStack)
+        {
+            if (pushedToLayerStack)
+            {
+                _layers.Remove(systemId);
+            }
+
+            _panels.Remove(systemId);
+            _states[systemId] = UIState.Unloaded;
+            TryDispose(controller ?? panel?.Controller);
+            DestroyObject(instance ?? panel?.Root);
+            ReleasePrefab(systemId);
+            TryActivateTop();
+        }
+
+        private void CleanupCancelledPanel(string systemId, UIPanelInstance panel)
+        {
+            _layers.Remove(systemId);
+            _panels.Remove(systemId);
+            _states[systemId] = UIState.Unloaded;
+            TryDispose(panel?.Controller);
+            DestroyObject(panel?.Root);
+            ReleasePrefab(systemId);
+            TryActivateTop();
+        }
+
+        private void CommitActiveClose(string systemId, UIPanelInstance panel)
         {
             Exception firstException = null;
-            try
-            {
-                panel.Controller.OnPreClose();
-                panel.Controller.Close();
-                if (callDeactivated)
-                {
-                    panel.Controller.OnDeactivated();
-                }
-
-                panel.Controller.OnClosed();
-            }
-            catch (Exception ex)
-            {
-                firstException = ex;
-            }
-
-            try
-            {
-                panel.Controller.Dispose();
-            }
-            catch (Exception ex)
-            {
-                if (firstException == null)
-                {
-                    firstException = ex;
-                }
-            }
-
+            CaptureException(panel.Controller.Close, ref firstException);
+            _panels.RemoveActive(systemId, out _);
+            _layers.Remove(systemId);
+            CaptureException(panel.Controller.OnClosed, ref firstException);
+            CaptureException(panel.Controller.Dispose, ref firstException);
             DestroyObject(panel.Root);
-            _loader.Release(systemId);
+            ReleasePrefab(systemId);
+            _states[systemId] = UIState.Unloaded;
+            if (!_isDestroying)
+            {
+                CaptureException(ActivateIfReadyTop, ref firstException);
+            }
+
+            if (firstException != null)
+            {
+                throw firstException;
+            }
+        }
+
+        private void ReleaseHiddenPanel(string systemId, UIPanelInstance panel)
+        {
+            Exception firstException = null;
+            CaptureException(panel.Controller.OnPreClose, ref firstException);
+            CaptureException(panel.Controller.Close, ref firstException);
+            CaptureException(panel.Controller.OnClosed, ref firstException);
+            CaptureException(panel.Controller.Dispose, ref firstException);
+            DestroyObject(panel.Root);
+            ReleasePrefab(systemId);
             _states[systemId] = UIState.Unloaded;
 
             if (firstException != null)
@@ -464,23 +623,282 @@ namespace KK.UI.UMG
             }
         }
 
-        private void ActivateTopController()
+        private Task<T> RunSerializedAsync<T>(string systemId, Func<Task<T>> operation)
         {
-            var top = _layers.Top;
-            if (top.view != null && _panels.TryGetActive(top.systemId, out var topPanel))
+            return RunSerializedCoreAsync(systemId, operation);
+        }
+
+        private Task RunSerializedAsync(string systemId, Func<Task> operation)
+        {
+            return RunSerializedCoreAsync(systemId, operation);
+        }
+
+        private async Task<T> RunSerializedCoreAsync<T>(string systemId, Func<Task<T>> operation)
+        {
+            var managerCancellation = destroyCancellationToken;
+            var gate = GetOperationGate(systemId);
+            await gate.WaitAsync(managerCancellation);
+            try
             {
-                topPanel.Controller.OnActivated();
+                managerCancellation.ThrowIfCancellationRequested();
+                if (_isDestroying)
+                {
+                    throw new OperationCanceledException(managerCancellation);
+                }
+
+                return await operation();
             }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        private async Task RunSerializedCoreAsync(string systemId, Func<Task> operation)
+        {
+            var managerCancellation = destroyCancellationToken;
+            var gate = GetOperationGate(systemId);
+            await gate.WaitAsync(managerCancellation);
+            try
+            {
+                managerCancellation.ThrowIfCancellationRequested();
+                if (_isDestroying)
+                {
+                    throw new OperationCanceledException(managerCancellation);
+                }
+
+                await operation();
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        private Task<UIViewBase> StartTrackedViewOperation(
+            Dictionary<string, Task<UIViewBase>> tasks,
+            string systemId,
+            Func<Task<UIViewBase>> operation)
+        {
+            if (tasks.TryGetValue(systemId, out var existing))
+            {
+                return existing;
+            }
+
+            var task = operation();
+            tasks[systemId] = task;
+            _ = RemoveTrackedViewOperationAsync(tasks, systemId, task);
+            return task;
+        }
+
+        private Task StartTrackedOperation(
+            Dictionary<string, Task> tasks,
+            string systemId,
+            Func<Task> operation)
+        {
+            if (tasks.TryGetValue(systemId, out var existing))
+            {
+                return existing;
+            }
+
+            var task = operation();
+            tasks[systemId] = task;
+            _ = RemoveTrackedOperationAsync(tasks, systemId, task);
+            return task;
+        }
+
+        private static async Task RemoveTrackedViewOperationAsync(
+            Dictionary<string, Task<UIViewBase>> tasks,
+            string systemId,
+            Task<UIViewBase> task)
+        {
+            try
+            {
+                await task;
+            }
+            catch
+            {
+            }
+            finally
+            {
+                if (tasks.TryGetValue(systemId, out var current) && ReferenceEquals(current, task))
+                {
+                    tasks.Remove(systemId);
+                }
+            }
+        }
+
+        private static async Task RemoveTrackedOperationAsync(
+            Dictionary<string, Task> tasks,
+            string systemId,
+            Task task)
+        {
+            try
+            {
+                await task;
+            }
+            catch
+            {
+            }
+            finally
+            {
+                if (tasks.TryGetValue(systemId, out var current) && ReferenceEquals(current, task))
+                {
+                    tasks.Remove(systemId);
+                }
+            }
+        }
+
+        private SemaphoreSlim GetOperationGate(string systemId)
+        {
+            if (!_operationGates.TryGetValue(systemId, out var gate))
+            {
+                gate = new SemaphoreSlim(1, 1);
+                _operationGates[systemId] = gate;
+            }
+
+            return gate;
+        }
+
+        private bool IsQueuedTopFirstRequestAccepted(string systemId)
+        {
+            var state = GetState(systemId);
+            return _layers.IsTop(systemId) || state == UIState.Loading;
+        }
+
+        private Task<GameObject> LoadPrefabAsync(string systemId)
+        {
+            return PrefabLoaderOverride != null
+                ? PrefabLoaderOverride(systemId)
+                : _loader.LoadPrefabAsync(systemId);
+        }
+
+        private void ReleasePrefab(string systemId)
+        {
+            if (PrefabLoaderOverride != null)
+            {
+                PrefabReleaseOverride?.Invoke(systemId);
+                return;
+            }
+
+            _loader.Release(systemId);
         }
 
         private UIControllerBase CreateController(string systemId)
         {
+            if (ControllerFactoryOverride != null)
+            {
+                return ControllerFactoryOverride(systemId)
+                    ?? throw new InvalidOperationException($"UI controller factory override returned null for '{systemId}'.");
+            }
+
             if (!_controllerFactories.TryGetValue(systemId, out var factory))
             {
                 throw new InvalidOperationException($"No UI controller factory registered for '{systemId}'. Ensure generated UI registration code has compiled and loaded.");
             }
 
             return factory();
+        }
+
+        private static void CaptureException(Action action, ref Exception firstException)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                if (firstException == null)
+                {
+                    firstException = ex;
+                }
+            }
+        }
+
+        private static void TryLifecycle(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        private static void TryDispose(UIControllerBase controller)
+        {
+            if (controller == null)
+            {
+                return;
+            }
+
+            try
+            {
+                controller.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        private void TryActivateTop()
+        {
+            if (_isDestroying)
+            {
+                return;
+            }
+
+            try
+            {
+                ActivateIfReadyTop();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        private static void LogTransitionException(string systemId, string phase, UIViewBase view, Exception exception)
+        {
+            Debug.LogError($"[UIManager] {systemId} {phase} transition on {view.GetType().Name} failed and will continue to the target state.\n{exception}");
+        }
+
+        private static void CancelWithoutMasking(CancellationTokenSource cancellation)
+        {
+            try
+            {
+                cancellation.Cancel();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+
+        private static void ObserveLateFault(Task task)
+        {
+            if (task == null)
+            {
+                return;
+            }
+
+            if (task.IsFaulted)
+            {
+                _ = task.Exception;
+                return;
+            }
+
+            if (!task.IsCompleted)
+            {
+                _ = task.ContinueWith(
+                    completed => _ = completed.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
+            }
         }
 
         private static string GetAddressablesKey(string systemId)
@@ -542,6 +960,14 @@ namespace KK.UI.UMG
 #else
             Debug.LogWarning("Created EventSystem without an input module because no supported Unity input backend is enabled.");
 #endif
+        }
+
+        private static void EnsureSystemId(string systemId)
+        {
+            if (string.IsNullOrWhiteSpace(systemId))
+            {
+                throw new ArgumentException("UI system id cannot be null or empty.", nameof(systemId));
+            }
         }
 
         private static void DestroyObject(GameObject instance)

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.0.5
+
+- Added optional handwritten View partial hooks for Open, Show, Hide, and Close transitions; `UIManager` now awaits them with per-panel serialization, cross-panel concurrency, interaction gating, cancellation, timeout, and rollback.
+- Made `LayerStack` topology-only and added arbitrary layer removal so a transition can safely finish after another panel has covered it.
+- Generated stable `RectTransform` references for named nested Panel nodes without duplicating existing control references or the View root.
+- Added legacy `Runtime: Pass` ledger migration to canonical `Verified`, plus explicit `Mark Runtime Verified` and `Reset Runtime Pending` actions in KKPipeline.
+- Added runtime, generator, verifier, and validation-ledger regression coverage for the v1.0.5 contracts.
+
 ## 1.0.4
 
 - Added runtime preload and panel cache APIs: `PreloadAsync`, `HideAsync`, `ShowAsync`, `ReleaseAsync`, and `CloseAsync(systemId, UICloseMode.Hide)`.

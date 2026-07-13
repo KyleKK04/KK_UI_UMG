@@ -663,7 +663,7 @@ namespace KK.UI.UMG.Editor.Generators
         {
             ValidatorUtilityProxy.Walk(context.Layout.Root, node =>
             {
-                if (!IsBindableControl(node.Type))
+                if (!IsGeneratedViewReference(context.Layout.Root, node))
                 {
                     return;
                 }
@@ -947,6 +947,11 @@ namespace KK.UI.UMG.Editor.Generators
                 type == "Scrollbar" ||
                 type == "ScrollView" ||
                 type == "VerticalList";
+        }
+
+        private static bool IsGeneratedViewReference(UiLayoutNode root, UiLayoutNode node)
+        {
+            return IsBindableControl(node.Type) || (!ReferenceEquals(root, node) && node.Type == "Panel");
         }
 
         private static class ValidatorUtilityProxy

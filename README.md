@@ -11,7 +11,7 @@ Assets/UI/Source/<PackageId>/          # default Source package path
   -> UIManager.OpenAsync(...)
 ```
 
-Generated 输出是可删除、可覆盖、可重建的产物；需要长期维护的是 Source JSON、手写 Controller partial 和业务 Service Adapter。
+Generated-owned 输出是可删除、可覆盖、可重建的产物；需要长期维护的是 Source JSON、生成包根目录下的手写 View / Controller partial 和业务 Service Adapter。
 
 ## 适用目标
 
@@ -20,13 +20,13 @@ KK_UI_UMG 适合这些 Unity 项目：
 - 运行时 UI 使用 UGUI，但希望 UI 结构、绑定、事件和资产依赖有稳定的文本源头。
 - 希望 UI 改动可以 code review，而不是只看 Prefab 序列化 diff。
 - 希望让 AI / Codex 从自然语言创建或修改 UI，同时不直接手改 Generated 文件。
-- 希望 UI 输入链路保持 MVVM-C 边界：View 只转发事件，Controller 写 Store，Binder 刷新 UGUI，UIManager 管生命周期。
+- 希望 UI 输入链路保持 MVVM-C 边界：View.Generated 转发事件，View partial 负责视觉动画，Controller 写 Store，Binder 刷新 UGUI，UIManager 管生命周期。
 - 希望把 UI 先做成纯显示结构，后续再通过 Service Adapter 接入已有业务代码。
 
 它不是这些东西：
 
 - 不是完整 UI 生态或主题系统。
-- 不是动画框架、虚拟列表框架或 UI Toolkit runtime 方案。
+- 不是 Tween 引擎、动画 JSON DSL、虚拟列表框架或 UI Toolkit runtime 方案；框架只提供 View 生命周期动画的等待协议。
 - 不是任意 Unity Component 的可视化编辑器。
 - 不是让 View / Binder 直接访问业务系统的快捷通道。
 
@@ -50,7 +50,7 @@ Package 依赖写在 `package.json` 中，Unity Package Manager 会处理 Addres
 普通用户推荐使用 GitHub Release 中的 tarball。tarball 是正式交付包，不包含 package 开发用 `Tests/`。
 
 ```text
-com.kk.ui-umg-1.0.4.tgz
+com.kk.ui-umg-1.0.5.tgz
 ```
 
 在 Unity Package Manager 中选择：
@@ -58,7 +58,7 @@ com.kk.ui-umg-1.0.4.tgz
 ```text
 Package Manager
   -> Add package from tarball...
-  -> com.kk.ui-umg-1.0.4.tgz
+  -> com.kk.ui-umg-1.0.5.tgz
 ```
 
 或写入 `Packages/manifest.json`：
@@ -66,7 +66,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.4.tgz"
+    "com.kk.ui-umg": "file:/absolute/path/com.kk.ui-umg-1.0.5.tgz"
   }
 }
 ```
@@ -76,7 +76,7 @@ Package Manager
 ```json
 {
   "dependencies": {
-    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.4"
+    "com.kk.ui-umg": "https://github.com/KyleKK04/KK_UI_UMG.git#v1.0.5"
   }
 }
 ```
@@ -212,7 +212,7 @@ Assets/UI/Source/<PackageId>/
 
 也可以放在项目自定义 Source 根下，例如 `Assets/_Project/UISource/<PackageId>/`。合法规则是：Source package root 在 `Assets/` 或 `Packages/` 下，最后一级文件夹名等于 `packageId`，且不在 `Generated` 文件夹下。
 
-`Generated/` 下的 C# 和 Prefab 可以删除后重建。如果生成结果不对，应该修改 Source JSON 或 generator，而不是手改生成物。
+生成包的 generated-owned 子目录中的 C# 和 Prefab 可以删除后重建。如果生成结果不对，应该修改 Source JSON 或 generator，而不是手改生成物；生成包根目录的手写 partial 不属于可重建输出。
 
 ### MVVM-C 边界清楚
 
@@ -229,13 +229,45 @@ UGUI event
 
 职责边界：
 
-- View 只持有 UGUI 引用并转发事件。
+- View.Generated 持有 UGUI 引用并转发事件；手写 View partial 只负责视觉表现。
 - Controller 是 UI 业务入口，只由它写 Store。
 - ViewModelStore 是显示状态来源。
 - Binder 只把 Store 写回 UGUI。
 - UIManager 负责预加载、打开、隐藏、显示、关闭、释放和生命周期。
 
 高频 UI 可以通过 `HideAsync` 保留 View / Controller / Store，再通过 `ShowAsync` 恢复显示；`CloseAsync` / `ReleaseAsync` 才是真正释放 Controller、销毁 View、释放 Addressables 的路径。Store 写入仍然使用泛型 `Store.Update<T>`，没有强类型 Update 快路径。
+
+### View partial 生命周期动画
+
+JSON 继续只描述结构、绑定和资产。需要自定义动画时，在生成包根目录添加手写 View partial：
+
+```text
+<Generated Parent>/<PackageId>/<ViewClassName>.cs
+```
+
+不要把它放进 generator-owned 的 `Scripts/`。可按需 override 四个阶段，未 override 时立即完成：
+
+```csharp
+using System.Threading;
+using System.Threading.Tasks;
+
+public partial class InventoryPanelView
+{
+    protected override Task OnPlayOpenTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayEnterAsync(cancellationToken);
+    }
+
+    protected override Task OnPlayCloseTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayExitAsync(cancellationToken);
+    }
+}
+```
+
+同样可以 override `OnPlayShowTransitionAsync` 和 `OnPlayHideTransitionAsync`。View partial 只操作 alpha、position、scale、color、Animator 等视觉属性；不写 Store、不访问 Service，也不调用 UIManager 或 Controller 生命周期。所有可等待动画必须响应传入的 `CancellationToken`。
+
+`UIManager` 会在 transition 完成后再推进稳定生命周期；同一个 View 的相反请求会串行，不同 View 可以并行。transition 期间目标不可交互并阻止点击穿透，只有已经完成 transition 且实际位于栈顶的 View 会收到 `OnActivated()`。
 
 ### 静态文本和动态文本分流
 
@@ -252,9 +284,10 @@ UGUI event
 <Generated Parent>/<PackageId>/Reports # 生成报告
 <Generated Parent>/<PackageId>/Assets  # 复制后的运行时资产
 <Generated Parent>/<PackageId>/<PackageId>Controller.cs  # 手写业务 partial
+<Generated Parent>/<PackageId>/<ViewClassName>.cs         # 可选手写视觉动画 partial
 ```
 
-生成器拥有 `Scripts/`、`Prefabs/`、`Reports/`、`Assets/` 子目录；手写业务 partial 放在对应 UI 文件夹根目录，不放进 `Scripts/`。
+生成器拥有 `Scripts/`、`Prefabs/`、`Reports/`、`Assets/` 子目录；手写 View / Controller partial 放在对应 UI 文件夹根目录，不放进 `Scripts/`。
 
 `assets.json` 里的 `contentHash` 是可选内容锁，不是必填项。只写 `source` 时会跳过 hash 校验；填写 `contentHash` 时才会严格校验 `sha256:` 格式和实际文件内容。TMP 字体、动态 atlas、材质等 Unity 可能自动重写的资源建议不填 `contentHash`，图标和稳定贴图等需要防漂移的资源再填写。
 
@@ -296,7 +329,7 @@ Editor pipeline 提供：
 Validate -> Generate -> Verify -> Refresh Preview
 ```
 
-每个 Source package 可以带 `validation.md`，由 pipeline 写入 Validate / Generate / Verify / Preview 状态，方便记录交付状态。
+每个 Source package 可以带 `validation.md`，由 pipeline 写入 Validate / Generate / Verify / Preview 状态，方便记录交付状态。Runtime 的规范状态只有 `Pending / Verified`；真实完成 PlayMode 或人工验收后，在 KKPipeline 中填写说明并点击 `Mark Runtime Verified`，需要重新验收时点击 `Reset Runtime Pending`。静态管线步骤不会自动推断 Runtime 已验证；旧版 `Runtime: Pass` 会在下一次管线写入时迁移为 `Verified`。
 
 ### 业务接入通过 Service Adapter
 

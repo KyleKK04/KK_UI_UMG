@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using KK.UI.UMG;
@@ -59,6 +62,48 @@ namespace KK.UI.UMG.Tests
             Assert.Throws<System.ObjectDisposedException>(() => controller.Store.Update("Message", "goodbye"));
         }
 
+        [Test]
+        public void DefaultViewTransitionsCompleteImmediately()
+        {
+            var viewObject = new GameObject("view");
+            try
+            {
+                var view = viewObject.AddComponent<TestView>();
+
+                Assert.That(view.PlayOpenTransitionAsync(CancellationToken.None).IsCompletedSuccessfully, Is.True);
+                Assert.That(view.PlayShowTransitionAsync(CancellationToken.None).IsCompletedSuccessfully, Is.True);
+                Assert.That(view.PlayHideTransitionAsync(CancellationToken.None).IsCompletedSuccessfully, Is.True);
+                Assert.That(view.PlayCloseTransitionAsync(CancellationToken.None).IsCompletedSuccessfully, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(viewObject);
+            }
+        }
+
+        [Test]
+        public void ViewTransitionWrappersForwardEachPhaseAndTokenOnce()
+        {
+            var viewObject = new GameObject("view");
+            using var cancellation = new CancellationTokenSource();
+            try
+            {
+                var view = viewObject.AddComponent<TransitionView>();
+
+                view.PlayOpenTransitionAsync(cancellation.Token).GetAwaiter().GetResult();
+                view.PlayShowTransitionAsync(cancellation.Token).GetAwaiter().GetResult();
+                view.PlayHideTransitionAsync(cancellation.Token).GetAwaiter().GetResult();
+                view.PlayCloseTransitionAsync(cancellation.Token).GetAwaiter().GetResult();
+
+                Assert.That(view.Phases, Is.EqualTo(new[] { "Open", "Show", "Hide", "Close" }));
+                Assert.That(view.Tokens, Has.All.EqualTo(cancellation.Token));
+            }
+            finally
+            {
+                Object.DestroyImmediate(viewObject);
+            }
+        }
+
         private sealed class TestController : UIControllerBase
         {
             public int ViewBoundCount { get; private set; }
@@ -84,6 +129,47 @@ namespace KK.UI.UMG.Tests
 
             protected override void UnbindEvents()
             {
+            }
+        }
+
+        private sealed class TransitionView : UIViewBase
+        {
+            public List<string> Phases { get; } = new List<string>();
+            public List<CancellationToken> Tokens { get; } = new List<CancellationToken>();
+
+            protected override Task OnPlayOpenTransitionAsync(CancellationToken cancellationToken)
+            {
+                return Record("Open", cancellationToken);
+            }
+
+            protected override Task OnPlayShowTransitionAsync(CancellationToken cancellationToken)
+            {
+                return Record("Show", cancellationToken);
+            }
+
+            protected override Task OnPlayHideTransitionAsync(CancellationToken cancellationToken)
+            {
+                return Record("Hide", cancellationToken);
+            }
+
+            protected override Task OnPlayCloseTransitionAsync(CancellationToken cancellationToken)
+            {
+                return Record("Close", cancellationToken);
+            }
+
+            protected override void BindEvents()
+            {
+            }
+
+            protected override void UnbindEvents()
+            {
+            }
+
+            private Task Record(string phase, CancellationToken cancellationToken)
+            {
+                Phases.Add(phase);
+                Tokens.Add(cancellationToken);
+                return Task.CompletedTask;
             }
         }
     }

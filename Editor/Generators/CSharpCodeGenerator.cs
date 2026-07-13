@@ -32,7 +32,7 @@ namespace KK.UI.UMG.Editor.Generators
 
         private static string GenerateView(KKUIPipelineContext context)
         {
-            var controls = GetBindableControls(context.Layout.Root).ToList();
+            var controls = GetViewReferences(context.Layout.Root).ToList();
             var builder = new StringBuilder();
             builder.AppendLine(Header);
             builder.AppendLine("using TMPro;");
@@ -307,12 +307,12 @@ namespace {context.Codegen.Namespace}
             return path;
         }
 
-        private static IEnumerable<UiLayoutNode> GetBindableControls(UiLayoutNode root)
+        private static IEnumerable<UiLayoutNode> GetViewReferences(UiLayoutNode root)
         {
             var nodes = new List<UiLayoutNode>();
             ValidatorUtilityProxy.Walk(root, node =>
             {
-                if (IsBindableControl(node.Type))
+                if (IsBindableControl(node.Type) || (!ReferenceEquals(node, root) && node.Type == "Panel"))
                 {
                     nodes.Add(node);
                 }
@@ -335,6 +335,7 @@ namespace {context.Codegen.Namespace}
                 "Scrollbar" => "Scrollbar",
                 "ScrollView" => "ScrollRect",
                 "VerticalList" => "UIListView",
+                "Panel" => "RectTransform",
                 _ => throw new NotSupportedException(node.Type)
             };
         }

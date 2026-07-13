@@ -37,6 +37,7 @@ namespace KK.UI.UMG.Editor.Pipeline
             VerifyViewFields(context, prefab);
             VerifyControllerRegistration(context);
             verified.AddRange(VerifyGeneratedScripts(context));
+            VerifyGeneratedScriptOwnership(context);
             VerifyRuntimeSourceBoundaries(context);
             VerifyTextFonts(context, prefab);
             VerifyTextAlignments(context, prefab);
@@ -120,6 +121,11 @@ namespace KK.UI.UMG.Editor.Pipeline
 
             if (TryRead(scripts["view"], out var viewSource))
             {
+                if (!Contains(viewSource, $"public partial class {context.Codegen.View.ClassName}"))
+                {
+                    context.Add(KKUIPipelineIssueSeverity.Error, "VER037", $"View.Generated.cs must declare '{context.Codegen.View.ClassName}' as a partial class.");
+                }
+
                 VerifyNotContains(context, viewSource, "Store.", "VER022", "View.Generated.cs must not access ViewModelStore directly.");
                 VerifyNotContains(context, viewSource, "ViewModelStore", "VER022", "View.Generated.cs must not access ViewModelStore directly.");
                 VerifyNotContains(context, viewSource, "UILocalizationService", "VER023", "View.Generated.cs must not access localization directly.");
@@ -141,6 +147,24 @@ namespace KK.UI.UMG.Editor.Pipeline
             }
 
             return verified;
+        }
+
+        private static void VerifyGeneratedScriptOwnership(KKUIPipelineContext context)
+        {
+            var scriptsRoot = Path.Combine(context.GeneratedRoot, "Scripts");
+            if (!Directory.Exists(scriptsRoot))
+            {
+                return;
+            }
+
+            foreach (var path in Directory.GetFiles(scriptsRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                var firstLine = File.ReadLines(path).FirstOrDefault() ?? string.Empty;
+                if (!string.Equals(firstLine, CSharpCodeGenerator.Header, StringComparison.Ordinal))
+                {
+                    context.Add(KKUIPipelineIssueSeverity.Error, "VER036", $"Handwritten script '{AssetManifestUtility.ToAssetPath(path)}' must not be placed in the generated-owned Scripts folder.");
+                }
+            }
         }
 
         private static void VerifyRuntimeSourceBoundaries(KKUIPipelineContext context)
@@ -185,7 +209,7 @@ namespace KK.UI.UMG.Editor.Pipeline
 
             Walk(context.Layout.Root, node =>
             {
-                if (!IsBindableControl(node.Type))
+                if (!IsGeneratedViewReference(context.Layout.Root, node))
                 {
                     return;
                 }
@@ -465,6 +489,11 @@ namespace KK.UI.UMG.Editor.Pipeline
                 type == "Scrollbar" ||
                 type == "ScrollView" ||
                 type == "VerticalList";
+        }
+
+        private static bool IsGeneratedViewReference(UiLayoutNode root, UiLayoutNode node)
+        {
+            return IsBindableControl(node.Type) || (!ReferenceEquals(root, node) && node.Type == "Panel");
         }
     }
 }

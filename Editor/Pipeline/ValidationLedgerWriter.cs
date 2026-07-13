@@ -145,6 +145,49 @@ namespace KK.UI.UMG.Editor.Pipeline
             });
         }
 
+        public void WriteRuntimeStatus(KKUIPipelineContext context, bool verified, string source, string notes)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            EnsureScaffold(context);
+            var path = ValidationPath(context);
+            if (!ValidateLedgerFile(path, out var error))
+            {
+                throw new InvalidOperationException(error);
+            }
+
+            if (verified && (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(notes)))
+            {
+                throw new ArgumentException("Runtime verification requires a non-empty source and notes.");
+            }
+
+            var rows = ReadRowsOrDefault(context);
+            if (verified && new[] { "Validate", "Generate", "Verify" }.Any(step => rows[step].Status != "Pass"))
+            {
+                throw new InvalidOperationException("Runtime can be marked Verified only after Validate, Generate, and Verify are Pass.");
+            }
+
+            rows["Runtime"] = new LedgerRow
+            {
+                Step = "Runtime",
+                Status = verified ? "Verified" : "Pending",
+                UpdatedAt = DateTime.UtcNow.ToString("O"),
+                Source = string.IsNullOrWhiteSpace(source) ? "Manual" : source,
+                Notes = string.IsNullOrWhiteSpace(notes) ? "Runtime behavior requires re-verification." : notes
+            };
+
+            WriteRows(context, rows, new KKUIPipelineResult
+            {
+                Operation = "Runtime",
+                Status = verified ? "Verified" : "Pending",
+                Success = true,
+                Issues = new List<KKUIPipelineIssue>()
+            });
+        }
+
         private static void WriteGenerateResult(Dictionary<string, LedgerRow> rows, KKUIPipelineResult result, string now)
         {
             var validationFailed = HasError(result, IsValidationIssue);
@@ -332,10 +375,12 @@ namespace KK.UI.UMG.Editor.Pipeline
                     continue;
                 }
 
-                rows[cells[0]] = new LedgerRow
+                var step = cells[0];
+                var status = step == "Runtime" && cells[1] == "Pass" ? "Verified" : cells[1];
+                rows[step] = new LedgerRow
                 {
-                    Step = cells[0],
-                    Status = cells[1],
+                    Step = step,
+                    Status = status,
                     UpdatedAt = cells[2],
                     Source = cells[3],
                     Notes = cells[4]

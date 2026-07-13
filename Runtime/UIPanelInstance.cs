@@ -17,5 +17,6 @@ namespace KK.UI.UMG
         public UIViewBase View { get; }
         public UIControllerBase Controller { get; }
         public bool IsHidden { get; set; }
+        public bool IsActivated { get; set; }
     }
 }

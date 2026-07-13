@@ -121,6 +121,57 @@ Lifecycle rules:
 - `CloseAsync` / `ReleaseAsync` are the release paths.
 - Business data freshness should still come from services/events/Controller Store updates, not from cached UI state.
 
+## Optional View Lifecycle Transitions
+
+JSON does not describe animation. When the user requests custom lifecycle visuals, place a handwritten View partial at:
+
+```text
+<Generated Parent>/<PackageId>/<ViewClassName>.cs
+```
+
+Do not place it in generated-owned `Scripts/` and do not edit `<ViewClassName>.Generated.cs`. Override only the phases that need animation:
+
+```csharp
+using System.Threading;
+using System.Threading.Tasks;
+
+public partial class InventoryPanelView
+{
+    protected override Task OnPlayOpenTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayEnterAsync(cancellationToken);
+    }
+
+    protected override Task OnPlayShowTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayShowAsync(cancellationToken);
+    }
+
+    protected override Task OnPlayHideTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayHideAsync(cancellationToken);
+    }
+
+    protected override Task OnPlayCloseTransitionAsync(CancellationToken cancellationToken)
+    {
+        return PlayExitAsync(cancellationToken);
+    }
+}
+```
+
+Defaults complete immediately, so existing UI remains compatible. The View partial may use Animator, Coroutine adapters, DOTween, or project code, but it must pass the supplied token through awaited work and stop cleanly on cancellation. It owns visual properties only; it must not access business services, write Store, call Controller lifecycle, or call UIManager.
+
+Lifecycle order:
+
+- Open: initialize and flush, `OnOpened`, await Open transition, then activate only if this View is the ready top layer.
+- Show: reactivate cached View, `OnShown(payload)`, await Show transition, then activate only if it is the ready top layer.
+- Hide: deactivate input, await Hide transition, remove from the layer topology, disable the View, then call `OnHidden`.
+- Close: deactivate input, call `OnPreClose`, await Close transition, then commit `Controller.Close`, `OnClosed`, Dispose, Destroy, and Addressables release.
+
+Different View instances may transition concurrently. Opposite commands for the same View are serialized, and only a transition-complete actual top layer is interactable. During transition the target is non-interactable and blocks click-through when it is topmost.
+
+The default timeout is five real-time seconds. Ordinary animation exceptions are logged and continue to the target stable state. A timeout cancels the token, rolls Open back to Unloaded, Show to Hidden, and Hide/Close to Open, then throws `TimeoutException`. Manager or View destruction cancels the wait and performs cleanup without late lifecycle callbacks.
+
 ## Payload
 
 Use `MessagePayload` for open-time data:

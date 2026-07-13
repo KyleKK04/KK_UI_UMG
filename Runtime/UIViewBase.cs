@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace KK.UI.UMG
@@ -24,6 +26,46 @@ namespace KK.UI.UMG
 
         protected abstract void BindEvents();
         protected abstract void UnbindEvents();
+
+        internal Task PlayOpenTransitionAsync(CancellationToken cancellationToken)
+        {
+            return OnPlayOpenTransitionAsync(cancellationToken) ?? Task.CompletedTask;
+        }
+
+        internal Task PlayShowTransitionAsync(CancellationToken cancellationToken)
+        {
+            return OnPlayShowTransitionAsync(cancellationToken) ?? Task.CompletedTask;
+        }
+
+        internal Task PlayHideTransitionAsync(CancellationToken cancellationToken)
+        {
+            return OnPlayHideTransitionAsync(cancellationToken) ?? Task.CompletedTask;
+        }
+
+        internal Task PlayCloseTransitionAsync(CancellationToken cancellationToken)
+        {
+            return OnPlayCloseTransitionAsync(cancellationToken) ?? Task.CompletedTask;
+        }
+
+        protected virtual Task OnPlayOpenTransitionAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnPlayShowTransitionAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnPlayHideTransitionAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnPlayCloseTransitionAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
 
         internal void SetInteraction(bool interactable, bool blocksRaycasts)
         {

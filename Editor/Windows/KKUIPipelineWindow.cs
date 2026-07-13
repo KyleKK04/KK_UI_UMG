@@ -27,6 +27,7 @@ namespace KK.UI.UMG.Editor.Windows
         private string _previewPrefabPath;
         private string _previewPackagePath;
         private string _previewGeneratedParentPath;
+        private string _runtimeVerificationNotes = string.Empty;
 
         [MenuItem("KK_UI_UMG/KKPipeline", priority = 0)]
         public static void Open()
@@ -116,6 +117,7 @@ namespace KK.UI.UMG.Editor.Windows
 
             DrawResultSummary();
             DrawPreviewPanel();
+            DrawRuntimeVerification();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.MaxHeight(180f));
             if (_lastResult != null)
@@ -143,6 +145,61 @@ namespace KK.UI.UMG.Editor.Windows
         private void OnDisable()
         {
             DestroyPreviewTexture();
+        }
+
+        private void DrawRuntimeVerification()
+        {
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("Runtime Verification", EditorStyles.boldLabel);
+            _runtimeVerificationNotes = EditorGUILayout.TextField("Notes", _runtimeVerificationNotes);
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(!IsRunnable() || string.IsNullOrWhiteSpace(_runtimeVerificationNotes)))
+            {
+                if (GUILayout.Button("Mark Runtime Verified") &&
+                    EditorUtility.DisplayDialog(
+                        "Mark Runtime Verified",
+                        "Confirm that the selected UI package has passed a real PlayMode or manual runtime check.",
+                        "Mark Verified",
+                        "Cancel"))
+                {
+                    WriteRuntimeStatus(true, "Manual PlayMode", _runtimeVerificationNotes);
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(!IsRunnable()))
+            {
+                if (GUILayout.Button("Reset Runtime Pending"))
+                {
+                    WriteRuntimeStatus(false, "Manual", "Runtime behavior requires re-verification.");
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void WriteRuntimeStatus(bool verified, string source, string notes)
+        {
+            if (!ValidateBeforeRun())
+            {
+                return;
+            }
+
+            try
+            {
+                var context = KKUIPipelineContext.Load(_packageManifestPath, GetGeneratedParentPath());
+                new ValidationLedgerWriter().WriteRuntimeStatus(context, verified, source, notes);
+                _lastResult = new KKUIPipelineResult
+                {
+                    Operation = "Runtime",
+                    Status = verified ? "Verified" : "Pending",
+                    Success = true
+                };
+                AssetDatabase.Refresh();
+            }
+            catch (Exception ex)
+            {
+                _selectionError = $"Cannot update Runtime status: {ex.Message}";
+            }
         }
 
         private void DrawManifestSelector()

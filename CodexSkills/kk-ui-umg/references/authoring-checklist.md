@@ -40,6 +40,8 @@ Use this checklist before returning work to the user.
 - For a new image or sprite, verify the real asset path and update `assets.json`.
 - If the user asks to connect external business data, read `business-adapter.md`, add `codegen.requiredServices`, and use a UI-facing service adapter instead of inventing business model fields in `bindings.json`.
 - Handwritten Controller partials belong at `<Generated Parent>/<PackageId>/<PackageId>Controller.cs`; do not create `Controllers/`, `Business/`, or `Partial/` subfolders and do not put them inside the generated-owned `Scripts/` folder.
+- Handwritten View transition partials belong at `<Generated Parent>/<PackageId>/<ViewClassName>.cs`; create one only when animation is requested, and never place it in `Scripts/`.
+- Keep animation in View Open / Show / Hide / Close overrides, forward the supplied `CancellationToken`, and do not call UIManager or Controller lifecycle from animation code.
 - Report any new or changed handwritten Controller handlers required.
 
 ## MVVM-C Boundary
@@ -58,6 +60,7 @@ Use this checklist before returning work to the user.
 - View, Binder, UIListView, and MessageBus do not access business services.
 - Controller stores UI state and business ids, not long-lived copies of business source lists.
 - Runtime code does not read Source JSON.
+- Runtime ledger statuses are `Pending / Verified`; do not author `Runtime: Pass`. Mark Verified only after a real runtime check with concrete notes.
 - Prefab Inspector persistent events should be empty after generation.
 
 ## Validation
@@ -100,4 +103,5 @@ Include:
 - Validate / Generate / Verify result or why it was not run.
 - Preview result if run; otherwise state it remains `NotRun`.
 - `README.md` and `validation.md` ledger status.
+- Whether Runtime remains `Pending` or was explicitly marked `Verified` after PlayMode/manual evidence.
 - Delivery status: `Source authoring complete`, `Generated prefab verified`, `Runtime behavior pending`, or `Runtime behavior verified`.

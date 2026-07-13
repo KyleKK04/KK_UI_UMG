@@ -65,6 +65,38 @@ namespace KK.UI.UMG.Editor.Tests
         }
 
         [Test]
+        public void InvalidRuntimeStatusStillFails()
+        {
+            var context = CreateContext();
+            new ValidationLedgerWriter().EnsureScaffold(context);
+            var path = Path.Combine(_sourceRoot, "validation.md");
+            File.WriteAllText(path, File.ReadAllText(path).Replace("| Runtime | Pending |", "| Runtime | OK |"));
+
+            new SourcePackageValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "SRC009"), Is.True);
+        }
+
+        [Test]
+        public void LegacyRuntimePassIsAcceptedAndRewrittenAsVerified()
+        {
+            var context = CreateContext();
+            new ValidationLedgerWriter().EnsureScaffold(context);
+            var path = Path.Combine(_sourceRoot, "validation.md");
+            File.WriteAllText(path, File.ReadAllText(path).Replace(
+                "| Runtime | Pending | - | Manual | Runtime behavior not verified |",
+                "| Runtime | Pass | 2026-07-10T02:36:26Z | Manual PlayMode | Enter flow verified |"));
+
+            new SourcePackageValidator().Validate(context);
+            Assert.That(context.Issues.Any(issue => issue.Code == "SRC009"), Is.False);
+
+            new ValidationLedgerWriter().WritePipelineResult(context, new GamePipelineResultBuilder("Validate", true).Build());
+            var text = File.ReadAllText(path);
+            Assert.That(text, Does.Contain("| Runtime | Verified | 2026-07-10T02:36:26Z | Manual PlayMode | Enter flow verified |"));
+            Assert.That(text, Does.Not.Contain("| Runtime | Pass |"));
+        }
+
+        [Test]
         public void ValidationLedgerPreservesManualNotes()
         {
             var context = CreateContext();
@@ -89,6 +121,35 @@ namespace KK.UI.UMG.Editor.Tests
             new ValidationLedgerWriter().WritePipelineResult(context, new GamePipelineResultBuilder("Verify", true).Build());
 
             Assert.That(File.ReadAllText(path), Does.Contain("| Runtime | Verified |"));
+        }
+
+        [Test]
+        public void RuntimeStatusCanBeExplicitlyVerifiedAndReset()
+        {
+            var context = CreateContext();
+            var writer = new ValidationLedgerWriter();
+            writer.WritePipelineResult(context, new GamePipelineResultBuilder("Generate", true).Build());
+
+            writer.WriteRuntimeStatus(context, true, "Manual PlayMode", "Enter button loaded AsylumDemo");
+            var path = Path.Combine(_sourceRoot, "validation.md");
+            var verified = File.ReadAllText(path);
+            Assert.That(verified, Does.Contain("| Runtime | Verified |"));
+            Assert.That(verified, Does.Contain("| Manual PlayMode | Enter button loaded AsylumDemo |"));
+
+            writer.WriteRuntimeStatus(context, false, "Manual", "Runtime behavior requires re-verification.");
+            var pending = File.ReadAllText(path);
+            Assert.That(pending, Does.Contain("| Runtime | Pending |"));
+        }
+
+        [Test]
+        public void RuntimeCannotBeVerifiedBeforeStaticPipelinePasses()
+        {
+            var context = CreateContext();
+            var writer = new ValidationLedgerWriter();
+            writer.EnsureScaffold(context);
+
+            Assert.Throws<System.InvalidOperationException>(() =>
+                writer.WriteRuntimeStatus(context, true, "Manual PlayMode", "Checked"));
         }
 
         [Test]

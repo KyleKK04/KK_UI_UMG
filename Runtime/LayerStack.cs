@@ -6,7 +6,7 @@ namespace KK.UI.UMG
 {
     public sealed class LayerStack
     {
-        private readonly Stack<string> _stack = new Stack<string>();
+        private readonly List<string> _stack = new List<string>();
         private readonly Dictionary<string, UIViewBase> _views = new Dictionary<string, UIViewBase>();
         private readonly List<string> _cachedStack = new List<string>();
         private bool _stackDirty = true;
@@ -22,7 +22,7 @@ namespace KK.UI.UMG
                     return (null, null);
                 }
 
-                var systemId = _stack.Peek();
+                var systemId = _stack[_stack.Count - 1];
                 return (systemId, _views.TryGetValue(systemId, out var view) ? view : null);
             }
         }
@@ -34,9 +34,7 @@ namespace KK.UI.UMG
                 if (_stackDirty)
                 {
                     _cachedStack.Clear();
-                    var items = _stack.ToArray();
-                    Array.Reverse(items);
-                    _cachedStack.AddRange(items);
+                    _cachedStack.AddRange(_stack);
                     _stackDirty = false;
                 }
 
@@ -56,18 +54,15 @@ namespace KK.UI.UMG
                 throw new ArgumentNullException(nameof(view));
             }
 
-            if (_stack.Count > 0)
+            var existingIndex = _stack.IndexOf(systemId);
+            if (existingIndex >= 0)
             {
-                var prevTop = _views[_stack.Peek()];
-                prevTop.SetInteraction(false, false);
-                prevTop.SetAlpha(DimAlpha);
+                _stack.RemoveAt(existingIndex);
             }
 
-            _stack.Push(systemId);
+            _stack.Add(systemId);
             _views[systemId] = view;
             _stackDirty = true;
-            view.SetInteraction(true, true);
-            view.SetAlpha(1f);
         }
 
         public void Pop(string systemId)
@@ -78,24 +73,32 @@ namespace KK.UI.UMG
                 return;
             }
 
-            if (_stack.Peek() != systemId)
+            if (!IsTop(systemId))
             {
-                Debug.LogWarning($"[LayerStack] Pop('{systemId}') ignored: top layer is '{_stack.Peek()}'.");
+                Debug.LogWarning($"[LayerStack] Pop('{systemId}') ignored: top layer is '{_stack[_stack.Count - 1]}'.");
                 return;
             }
 
-            _stack.Pop();
+            Remove(systemId);
+        }
+
+        public bool Remove(string systemId)
+        {
+            var index = _stack.IndexOf(systemId);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            _stack.RemoveAt(index);
             _views.Remove(systemId);
             _stackDirty = true;
+            return true;
+        }
 
-            if (_stack.Count == 0)
-            {
-                return;
-            }
-
-            var newTop = _views[_stack.Peek()];
-            newTop.SetInteraction(true, true);
-            newTop.SetAlpha(1f);
+        public bool IsTop(string systemId)
+        {
+            return _stack.Count > 0 && _stack[_stack.Count - 1] == systemId;
         }
     }
 }

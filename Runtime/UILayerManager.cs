@@ -23,6 +23,16 @@ namespace KK.UI.UMG
             _layerStack.Pop(systemId);
         }
 
+        public bool Remove(string systemId)
+        {
+            return _layerStack.Remove(systemId);
+        }
+
+        public bool IsTop(string systemId)
+        {
+            return _layerStack.IsTop(systemId);
+        }
+
         public void AssignSortingOrder(GameObject instance)
         {
             var canvas = instance.GetComponent<Canvas>();

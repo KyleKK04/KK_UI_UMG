@@ -8,7 +8,7 @@ namespace KK.UI.UMG.Tests
     public sealed class LayerStackTests
     {
         [Test]
-        public void PushDisablesPreviousTopAndActivatesNewTop()
+        public void PushOnlyChangesTopology()
         {
             var first = CreateView("first");
             var second = CreateView("second");
@@ -20,8 +20,8 @@ namespace KK.UI.UMG.Tests
                 stack.Push("second", second);
 
                 Assert.That(stack.Top.systemId, Is.EqualTo("second"));
-                Assert.That(first.GetComponent<CanvasGroup>().interactable, Is.False);
-                Assert.That(first.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
+                Assert.That(first.GetComponent<CanvasGroup>().interactable, Is.True);
+                Assert.That(first.GetComponent<CanvasGroup>().blocksRaycasts, Is.True);
                 Assert.That(second.GetComponent<CanvasGroup>().interactable, Is.True);
                 Assert.That(second.GetComponent<CanvasGroup>().blocksRaycasts, Is.True);
             }
@@ -33,7 +33,7 @@ namespace KK.UI.UMG.Tests
         }
 
         [Test]
-        public void PopRestoresPreviousLayer()
+        public void PopOnlyChangesTopology()
         {
             var first = CreateView("first");
             var second = CreateView("second");
@@ -42,12 +42,14 @@ namespace KK.UI.UMG.Tests
                 var stack = new LayerStack();
                 stack.Push("first", first);
                 stack.Push("second", second);
+                first.GetComponent<CanvasGroup>().interactable = false;
+                first.GetComponent<CanvasGroup>().blocksRaycasts = false;
 
                 stack.Pop("second");
 
                 Assert.That(stack.Top.systemId, Is.EqualTo("first"));
-                Assert.That(first.GetComponent<CanvasGroup>().interactable, Is.True);
-                Assert.That(first.GetComponent<CanvasGroup>().blocksRaycasts, Is.True);
+                Assert.That(first.GetComponent<CanvasGroup>().interactable, Is.False);
+                Assert.That(first.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
             }
             finally
             {
@@ -104,6 +106,34 @@ namespace KK.UI.UMG.Tests
             {
                 Object.DestroyImmediate(first.gameObject);
                 Object.DestroyImmediate(second.gameObject);
+            }
+        }
+
+        [Test]
+        public void RemoveCanDeleteMiddleLayerWithoutChangingTop()
+        {
+            var first = CreateView("first");
+            var second = CreateView("second");
+            var third = CreateView("third");
+            try
+            {
+                var stack = new LayerStack();
+                stack.Push("first", first);
+                stack.Push("second", second);
+                stack.Push("third", third);
+
+                Assert.That(stack.Remove("second"), Is.True);
+
+                Assert.That(stack.Top.systemId, Is.EqualTo("third"));
+                Assert.That(stack.Stack, Is.EqualTo(new[] { "first", "third" }));
+                Assert.That(stack.IsTop("third"), Is.True);
+                Assert.That(stack.IsTop("first"), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(first.gameObject);
+                Object.DestroyImmediate(second.gameObject);
+                Object.DestroyImmediate(third.gameObject);
             }
         }
 

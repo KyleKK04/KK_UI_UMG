@@ -7,6 +7,8 @@ This page explains common Validate / Generate / Verify issues and the usual fix 
 | Code | Meaning | Fix |
 |---|---|---|
 | `SRC001` | Source package root is outside the allowed project roots, under Generated, or the final folder name does not match `packageId`. | Put the package under `Assets/` or `Packages/`, keep the final folder name equal to `packageId`, and avoid any `Generated` folder. |
+| `SRC008` | Source package README is missing. | Add `README.md` beside the Source manifests. |
+| `SRC009` | `validation.md` is missing or its ledger contract is invalid. | Keep the marker block and canonical statuses. Runtime uses `Pending / Verified`; legacy `Runtime: Pass` is migrated automatically. |
 
 ## Text And Localization
 
@@ -38,3 +40,5 @@ This page explains common Validate / Generate / Verify issues and the usual fix 
 | `GEN008` / `GEN009` | Generated Parent override is invalid. | Choose an `Assets/` or `Packages/` folder; output must be `<Generated Parent>/<PackageId>`. |
 | `CG020`-`CG023` | `requiredServices` entry is invalid. | Use a UI-facing service type and a valid unique C# property name. |
 | `GENPENDING` | Generated scripts are compiling. | Wait for Unity compilation; prefab generation continues automatically. |
+| `VER036` | A handwritten C# file is inside generated-owned `Scripts/`. | Move View or Controller partials to `<Generated Parent>/<PackageId>/`. |
+| `VER037` | Generated View is no longer declared as a partial class. | Regenerate the View script and do not hand-edit generated output. |
