@@ -81,28 +81,95 @@ namespace KK.UI.UMG.Binding
 
         public static bool TryApply(object control, string property, object value)
         {
-            if (control is TMP_Text text && Is(property, "text"))
+            if (control is Transform transform && TryApply(transform, property, value))
             {
-                text.text = value?.ToString() ?? string.Empty;
                 return true;
             }
 
-            if (control is Image image && Is(property, "sprite"))
+            if (control is TMP_Text text)
             {
-                image.sprite = value as Sprite;
-                return true;
+                if (Is(property, "text"))
+                {
+                    text.text = value?.ToString() ?? string.Empty;
+                    return true;
+                }
+
+                if (Is(property, "fontSize"))
+                {
+                    text.fontSize = ToFloat(value);
+                    return true;
+                }
+
+                if (TryApplyGraphic(text, property, value))
+                {
+                    return true;
+                }
             }
 
-            if (control is RawImage rawImage && Is(property, "texture"))
+            if (control is Image image)
             {
-                rawImage.texture = value as Texture;
-                return true;
+                if (Is(property, "sprite"))
+                {
+                    image.sprite = value as Sprite;
+                    return true;
+                }
+
+                if (Is(property, "fillAmount"))
+                {
+                    image.fillAmount = Mathf.Clamp01(ToFloat(value));
+                    return true;
+                }
+
+                if (Is(property, "fillClockwise"))
+                {
+                    image.fillClockwise = value is bool enabled && enabled;
+                    return true;
+                }
+
+                if (Is(property, "fillOrigin"))
+                {
+                    image.fillOrigin = value is int intValue ? intValue : Mathf.RoundToInt(ToFloat(value));
+                    return true;
+                }
+
+                if (Is(property, "preserveAspect"))
+                {
+                    image.preserveAspect = value is bool enabled && enabled;
+                    return true;
+                }
+
+                if (TryApplyGraphic(image, property, value))
+                {
+                    return true;
+                }
             }
 
-            if (control is Button button && Is(property, "interactable"))
+            if (control is RawImage rawImage)
             {
-                button.interactable = value is bool enabled && enabled;
-                return true;
+                if (Is(property, "texture"))
+                {
+                    rawImage.texture = value as Texture;
+                    return true;
+                }
+
+                if (TryApplyGraphic(rawImage, property, value))
+                {
+                    return true;
+                }
+            }
+
+            if (control is Button button)
+            {
+                if (Is(property, "interactable"))
+                {
+                    button.interactable = value is bool enabled && enabled;
+                    return true;
+                }
+
+                if (TryApplyGraphic(button.targetGraphic, property, value))
+                {
+                    return true;
+                }
             }
 
             if (control is Toggle toggle)
@@ -128,6 +195,18 @@ namespace KK.UI.UMG.Binding
                     return true;
                 }
 
+                if (Is(property, "minValue"))
+                {
+                    slider.minValue = ToFloat(value);
+                    return true;
+                }
+
+                if (Is(property, "maxValue"))
+                {
+                    slider.maxValue = ToFloat(value);
+                    return true;
+                }
+
                 if (Is(property, "interactable"))
                 {
                     slider.interactable = value is bool enabled && enabled;
@@ -135,10 +214,25 @@ namespace KK.UI.UMG.Binding
                 }
             }
 
-            if (control is Scrollbar scrollbar && Is(property, "value"))
+            if (control is Scrollbar scrollbar)
             {
-                scrollbar.value = ToFloat(value);
-                return true;
+                if (Is(property, "value"))
+                {
+                    scrollbar.value = ToFloat(value);
+                    return true;
+                }
+
+                if (Is(property, "size"))
+                {
+                    scrollbar.size = Mathf.Clamp01(ToFloat(value));
+                    return true;
+                }
+
+                if (Is(property, "interactable"))
+                {
+                    scrollbar.interactable = value is bool enabled && enabled;
+                    return true;
+                }
             }
 
             if (control is TMP_InputField inputField)
@@ -197,6 +291,51 @@ namespace KK.UI.UMG.Binding
                     return (float)doubleValue;
                 default:
                     return 0f;
+            }
+        }
+
+        private static bool TryApplyGraphic(Graphic graphic, string property, object value)
+        {
+            if (graphic == null)
+            {
+                return false;
+            }
+
+            if (Is(property, "color"))
+            {
+                graphic.color = ToColor(value, graphic.color);
+                return true;
+            }
+
+            if (Is(property, "alpha"))
+            {
+                var color = graphic.color;
+                color.a = Mathf.Clamp01(ToFloat(value));
+                graphic.color = color;
+                return true;
+            }
+
+            if (Is(property, "raycastTarget"))
+            {
+                graphic.raycastTarget = value is bool enabled && enabled;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static Color ToColor(object value, Color fallback)
+        {
+            switch (value)
+            {
+                case Color color:
+                    return color;
+                case Color32 color32:
+                    return color32;
+                case string text when ColorUtility.TryParseHtmlString(text, out var parsed):
+                    return parsed;
+                default:
+                    return fallback;
             }
         }
     }

@@ -86,6 +86,120 @@ namespace KK.UI.UMG.Tests
             }
         }
 
+        [Test]
+        public void FlushWritesImageColorAndAlphaBindings()
+        {
+            var gameObject = new GameObject("view");
+            try
+            {
+                var view = gameObject.AddComponent<TestView>();
+                view.StatusImage = AddChildComponent<Image>(gameObject, "StatusImage");
+                view.StatusImage.color = Color.white;
+                var binder = new UguiBinder();
+                var store = new ViewModelStore();
+                binder.Configure(view, new List<ViewModelBinding>
+                {
+                    new ViewModelBinding { ControlId = "StatusImage", FieldId = "StatusColor", Mode = BindingMode.OneWay, Property = "color" },
+                    new ViewModelBinding { ControlId = "StatusImage", FieldId = "StatusAlpha", Mode = BindingMode.OneWay, Property = "alpha" },
+                    new ViewModelBinding { ControlId = "StatusImage", FieldId = "StatusFill", Mode = BindingMode.OneWay, Property = "fillAmount" },
+                    new ViewModelBinding { ControlId = "StatusImage", FieldId = "StatusRaycast", Mode = BindingMode.OneWay, Property = "raycastTarget" }
+                });
+
+                store.Update("StatusColor", new Color(0.25f, 0.5f, 0.75f, 1f));
+                store.Update("StatusAlpha", 0.4f);
+                store.Update("StatusFill", 0.6f);
+                store.Update("StatusRaycast", false);
+                binder.Flush(store);
+
+                Assert.That(view.StatusImage.color.r, Is.EqualTo(0.25f).Within(0.001f));
+                Assert.That(view.StatusImage.color.g, Is.EqualTo(0.5f).Within(0.001f));
+                Assert.That(view.StatusImage.color.b, Is.EqualTo(0.75f).Within(0.001f));
+                Assert.That(view.StatusImage.color.a, Is.EqualTo(0.4f).Within(0.001f));
+                Assert.That(view.StatusImage.fillAmount, Is.EqualTo(0.6f).Within(0.001f));
+                Assert.That(view.StatusImage.raycastTarget, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void FlushParsesImageColorStringBinding()
+        {
+            var gameObject = new GameObject("view");
+            try
+            {
+                var view = gameObject.AddComponent<TestView>();
+                view.StatusImage = AddChildComponent<Image>(gameObject, "StatusImage");
+                var binder = new UguiBinder();
+                var store = new ViewModelStore();
+                binder.Configure(view, new List<ViewModelBinding>
+                {
+                    new ViewModelBinding { ControlId = "StatusImage", FieldId = "StatusColor", Mode = BindingMode.OneWay, Property = "color" }
+                });
+
+                store.Update("StatusColor", "#33669980");
+                binder.Flush(store);
+
+                Assert.That(view.StatusImage.color.r, Is.EqualTo(0.2f).Within(0.01f));
+                Assert.That(view.StatusImage.color.g, Is.EqualTo(0.4f).Within(0.01f));
+                Assert.That(view.StatusImage.color.b, Is.EqualTo(0.6f).Within(0.01f));
+                Assert.That(view.StatusImage.color.a, Is.EqualTo(0.5f).Within(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void FlushWritesCommonGraphicProperties()
+        {
+            var gameObject = new GameObject("view");
+            try
+            {
+                var view = gameObject.AddComponent<TestView>();
+                view.MessageText = AddChildComponent<TextMeshProUGUI>(gameObject, "MessageText");
+                view.PreviewImage = AddChildComponent<RawImage>(gameObject, "PreviewImage");
+                view.ActionButton = AddChildComponent<Button>(gameObject, "ActionButton");
+                view.ActionButton.targetGraphic = view.ActionButton.gameObject.AddComponent<Image>();
+                var panelObject = new GameObject("PanelRoot", typeof(RectTransform), typeof(Image));
+                panelObject.transform.SetParent(gameObject.transform, false);
+                view.PanelRoot = panelObject.GetComponent<RectTransform>();
+                var panelImage = panelObject.GetComponent<Image>();
+                var binder = new UguiBinder();
+                var store = new ViewModelStore();
+                binder.Configure(view, new List<ViewModelBinding>
+                {
+                    new ViewModelBinding { ControlId = "MessageText", FieldId = "MessageColor", Mode = BindingMode.OneWay, Property = "color" },
+                    new ViewModelBinding { ControlId = "MessageText", FieldId = "MessageSize", Mode = BindingMode.OneWay, Property = "fontSize" },
+                    new ViewModelBinding { ControlId = "PreviewImage", FieldId = "PreviewAlpha", Mode = BindingMode.OneWay, Property = "alpha" },
+                    new ViewModelBinding { ControlId = "ActionButton", FieldId = "ButtonColor", Mode = BindingMode.OneWay, Property = "color" },
+                    new ViewModelBinding { ControlId = "PanelRoot", FieldId = "PanelAlpha", Mode = BindingMode.OneWay, Property = "alpha" }
+                });
+
+                store.Update("MessageColor", "#FFCC00");
+                store.Update("MessageSize", 32);
+                store.Update("PreviewAlpha", 0.25f);
+                store.Update("ButtonColor", new Color(0.1f, 0.2f, 0.3f, 0.4f));
+                store.Update("PanelAlpha", 0.35f);
+                binder.Flush(store);
+
+                Assert.That(view.MessageText.color.r, Is.EqualTo(1f).Within(0.01f));
+                Assert.That(view.MessageText.color.g, Is.EqualTo(0.8f).Within(0.01f));
+                Assert.That(view.MessageText.fontSize, Is.EqualTo(32f).Within(0.001f));
+                Assert.That(view.PreviewImage.color.a, Is.EqualTo(0.25f).Within(0.001f));
+                Assert.That(view.ActionButton.targetGraphic.color.r, Is.EqualTo(0.1f).Within(0.001f));
+                Assert.That(view.ActionButton.targetGraphic.color.a, Is.EqualTo(0.4f).Within(0.001f));
+                Assert.That(panelImage.color.a, Is.EqualTo(0.35f).Within(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
         private sealed class TestView : UIViewBase
         {
             public TextMeshProUGUI MessageText { get; set; }
@@ -94,6 +208,10 @@ namespace KK.UI.UMG.Tests
             public TMP_InputField NameInput { get; set; }
             public TMP_Dropdown ModeDropdown { get; set; }
             public UIListView List { get; set; }
+            public Image StatusImage { get; set; }
+            public RawImage PreviewImage { get; set; }
+            public Button ActionButton { get; set; }
+            public RectTransform PanelRoot { get; set; }
 
             protected override void BindEvents()
             {

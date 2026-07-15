@@ -522,6 +522,7 @@ namespace {context.Codegen.Namespace}
                 "int" => "int",
                 "float" => "float",
                 "bool" => "bool",
+                "Color" => "UnityEngine.Color",
                 "Sprite" => "UnityEngine.Sprite",
                 "Texture" => "UnityEngine.Texture",
                 "IReadOnlyList<MessagePayload>" => "IReadOnlyList<MessagePayload>",

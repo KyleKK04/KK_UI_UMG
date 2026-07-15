@@ -196,6 +196,52 @@ Field rules:
 - List data uses `IReadOnlyList<MessagePayload>`.
 - Do not invent business-specific strong model types in Source JSON. Business models stay behind Controller services and are mapped into Store fields or `MessagePayload` items.
 
+Supported dynamic binding properties:
+
+| Control | Property | Field types |
+|---|---|---|
+| Panel | `color` | `Color`, `string` |
+| Panel | `alpha` | `float`, `int` |
+| Panel | `raycastTarget` | `bool` |
+| Text | `text` | `string`, `int`, `float`, `bool` |
+| Text | `color` | `Color`, `string` |
+| Text | `alpha` | `float`, `int` |
+| Text | `fontSize` | `float`, `int` |
+| Image | `sprite` | `Sprite` |
+| Image | `color` | `Color`, `string` |
+| Image | `alpha` | `float`, `int` |
+| Image | `fillAmount` | `float`, `int` |
+| Image | `fillClockwise` | `bool` |
+| Image | `fillOrigin` | `int` |
+| Image | `preserveAspect` | `bool` |
+| Image | `raycastTarget` | `bool` |
+| RawImage | `texture` | `Texture` |
+| RawImage | `color` | `Color`, `string` |
+| RawImage | `alpha` | `float`, `int` |
+| RawImage | `raycastTarget` | `bool` |
+| Button | `interactable` | `bool` |
+| Button | `color` | `Color`, `string` |
+| Button | `alpha` | `float`, `int` |
+| Button | `raycastTarget` | `bool` |
+| Toggle | `isOn` | `bool` |
+| Toggle | `interactable` | `bool` |
+| Slider | `value` | `float`, `int` |
+| Slider | `minValue` | `float`, `int` |
+| Slider | `maxValue` | `float`, `int` |
+| Slider | `interactable` | `bool` |
+| Scrollbar | `value` | `float`, `int` |
+| Scrollbar | `size` | `float`, `int` |
+| Scrollbar | `interactable` | `bool` |
+| InputField | `text` | `string` |
+| InputField | `interactable` | `bool` |
+| Dropdown | `value` | `int` |
+| Dropdown | `interactable` | `bool` |
+| VerticalList | `items` | `IReadOnlyList<MessagePayload>` |
+
+Color bindings accept `UnityEngine.Color` values from Controller code. They also accept HTML color strings such as `#FFCC00` and `#FFCC0080` when the Store field type is `string`.
+
+Panel `color`, `alpha`, and `raycastTarget` bindings require the Panel node to define an `image` spec in `layout.json`; otherwise the generated prefab has only a `RectTransform` and no `Image` component to update.
+
 Text / localization validator codes:
 
 - `TXT001` Warning: static literal Text should use `locKey`.

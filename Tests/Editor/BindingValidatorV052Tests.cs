@@ -77,6 +77,39 @@ namespace KK.UI.UMG.Editor.Tests
             Assert.That(context.Issues.Any(issue => issue.Code == "BND013"), Is.True);
         }
 
+        [Test]
+        public void ImageColorAndAlphaBindingsPass()
+        {
+            var context = CreateImageContext();
+
+            new BindingValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "BND008"), Is.False);
+            Assert.That(context.Issues.Any(issue => issue.Code == "BND009"), Is.False);
+        }
+
+        [Test]
+        public void CommonGraphicBindingsPass()
+        {
+            var context = CreateCommonGraphicContext();
+
+            new BindingValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "BND008"), Is.False);
+            Assert.That(context.Issues.Any(issue => issue.Code == "BND009"), Is.False);
+        }
+
+        [Test]
+        public void ImageColorRequiresColorOrStringField()
+        {
+            var context = CreateImageContext();
+            context.Bindings.Mvvm.Fields[0].Type = "float";
+
+            new BindingValidator().Validate(context);
+
+            Assert.That(context.Issues.Any(issue => issue.Code == "BND009"), Is.True);
+        }
+
         private static KKUIPipelineContext CreateContext()
         {
             return new KKUIPipelineContext
@@ -164,6 +197,121 @@ namespace KK.UI.UMG.Editor.Tests
                             Mode = "OneWay",
                             Property = "text"
                         }
+                    },
+                    Events = new List<UiEventSpec>()
+                }
+            };
+        }
+
+        private static KKUIPipelineContext CreateImageContext()
+        {
+            return new KKUIPipelineContext
+            {
+                Layout = new UiLayoutManifest
+                {
+                    Root = new UiLayoutNode
+                    {
+                        Type = "Panel",
+                        Id = "Root",
+                        Children = new List<UiLayoutNode>
+                        {
+                            new UiLayoutNode { Type = "Image", Id = "HealthFill" }
+                        }
+                    }
+                },
+                Bindings = new UiBindingsManifest
+                {
+                    Mvvm = new UiMvvmSection
+                    {
+                        Fields = new List<UiViewModelFieldSpec>
+                        {
+                            new UiViewModelFieldSpec { Id = "HealthColor", Type = "Color" },
+                            new UiViewModelFieldSpec { Id = "HealthAlpha", Type = "float" },
+                            new UiViewModelFieldSpec { Id = "HealthFill", Type = "float" },
+                            new UiViewModelFieldSpec { Id = "HealthRaycast", Type = "bool" }
+                        }
+                    },
+                    Bindings = new List<UiBindingSpec>
+                    {
+                        new UiBindingSpec
+                        {
+                            ControlId = "HealthFill",
+                            FieldId = "HealthColor",
+                            Mode = "OneWay",
+                            Property = "color"
+                        },
+                        new UiBindingSpec
+                        {
+                            ControlId = "HealthFill",
+                            FieldId = "HealthAlpha",
+                            Mode = "OneWay",
+                            Property = "alpha"
+                        },
+                        new UiBindingSpec
+                        {
+                            ControlId = "HealthFill",
+                            FieldId = "HealthFill",
+                            Mode = "OneWay",
+                            Property = "fillAmount"
+                        },
+                        new UiBindingSpec
+                        {
+                            ControlId = "HealthFill",
+                            FieldId = "HealthRaycast",
+                            Mode = "OneWay",
+                            Property = "raycastTarget"
+                        }
+                    },
+                    Events = new List<UiEventSpec>()
+                }
+            };
+        }
+
+        private static KKUIPipelineContext CreateCommonGraphicContext()
+        {
+            return new KKUIPipelineContext
+            {
+                Layout = new UiLayoutManifest
+                {
+                    Root = new UiLayoutNode
+                    {
+                        Type = "Panel",
+                        Id = "Root",
+                        Children = new List<UiLayoutNode>
+                        {
+                            new UiLayoutNode { Type = "Panel", Id = "PanelRoot", Image = new UiImageSpec { Color = "#FFFFFF" } },
+                            new UiLayoutNode { Type = "Text", Id = "TitleText" },
+                            new UiLayoutNode { Type = "RawImage", Id = "PreviewImage" },
+                            new UiLayoutNode { Type = "Button", Id = "ActionButton" },
+                            new UiLayoutNode { Type = "Slider", Id = "ProgressSlider" },
+                            new UiLayoutNode { Type = "Scrollbar", Id = "ScrollBar" }
+                        }
+                    }
+                },
+                Bindings = new UiBindingsManifest
+                {
+                    Mvvm = new UiMvvmSection
+                    {
+                        Fields = new List<UiViewModelFieldSpec>
+                        {
+                            new UiViewModelFieldSpec { Id = "PanelAlpha", Type = "float" },
+                            new UiViewModelFieldSpec { Id = "TitleColor", Type = "string" },
+                            new UiViewModelFieldSpec { Id = "TitleSize", Type = "int" },
+                            new UiViewModelFieldSpec { Id = "PreviewAlpha", Type = "float" },
+                            new UiViewModelFieldSpec { Id = "ButtonColor", Type = "Color" },
+                            new UiViewModelFieldSpec { Id = "SliderMax", Type = "float" },
+                            new UiViewModelFieldSpec { Id = "ScrollbarSize", Type = "float" }
+                        }
+                    },
+                    Bindings = new List<UiBindingSpec>
+                    {
+                        new UiBindingSpec { ControlId = "PanelRoot", FieldId = "PanelAlpha", Mode = "OneWay", Property = "alpha" },
+                        new UiBindingSpec { ControlId = "TitleText", FieldId = "TitleColor", Mode = "OneWay", Property = "color" },
+                        new UiBindingSpec { ControlId = "TitleText", FieldId = "TitleSize", Mode = "OneWay", Property = "fontSize" },
+                        new UiBindingSpec { ControlId = "PreviewImage", FieldId = "PreviewAlpha", Mode = "OneWay", Property = "alpha" },
+                        new UiBindingSpec { ControlId = "ActionButton", FieldId = "ButtonColor", Mode = "OneWay", Property = "color" },
+                        new UiBindingSpec { ControlId = "ProgressSlider", FieldId = "SliderMax", Mode = "OneWay", Property = "maxValue" },
+                        new UiBindingSpec { ControlId = "ScrollBar", FieldId = "ScrollbarSize", Mode = "OneWay", Property = "size" }
                     },
                     Events = new List<UiEventSpec>()
                 }

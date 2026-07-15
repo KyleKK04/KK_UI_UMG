@@ -11,13 +11,58 @@ namespace KK.UI.UMG.Editor.Validators
         private static readonly Dictionary<string, Dictionary<string, HashSet<string>>> SupportedProperties =
             new Dictionary<string, Dictionary<string, HashSet<string>>>
             {
-                ["Text"] = new Dictionary<string, HashSet<string>> { ["text"] = new HashSet<string> { "string", "int", "float", "bool" } },
-                ["Image"] = new Dictionary<string, HashSet<string>> { ["sprite"] = new HashSet<string> { "Sprite" } },
-                ["RawImage"] = new Dictionary<string, HashSet<string>> { ["texture"] = new HashSet<string> { "Texture" } },
-                ["Button"] = new Dictionary<string, HashSet<string>> { ["interactable"] = new HashSet<string> { "bool" } },
+                ["Panel"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["color"] = new HashSet<string> { "Color", "string" },
+                    ["alpha"] = new HashSet<string> { "float", "int" },
+                    ["raycastTarget"] = new HashSet<string> { "bool" }
+                },
+                ["Text"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["text"] = new HashSet<string> { "string", "int", "float", "bool" },
+                    ["color"] = new HashSet<string> { "Color", "string" },
+                    ["alpha"] = new HashSet<string> { "float", "int" },
+                    ["fontSize"] = new HashSet<string> { "float", "int" }
+                },
+                ["Image"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["sprite"] = new HashSet<string> { "Sprite" },
+                    ["color"] = new HashSet<string> { "Color", "string" },
+                    ["alpha"] = new HashSet<string> { "float", "int" },
+                    ["fillAmount"] = new HashSet<string> { "float", "int" },
+                    ["fillClockwise"] = new HashSet<string> { "bool" },
+                    ["fillOrigin"] = new HashSet<string> { "int" },
+                    ["preserveAspect"] = new HashSet<string> { "bool" },
+                    ["raycastTarget"] = new HashSet<string> { "bool" }
+                },
+                ["RawImage"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["texture"] = new HashSet<string> { "Texture" },
+                    ["color"] = new HashSet<string> { "Color", "string" },
+                    ["alpha"] = new HashSet<string> { "float", "int" },
+                    ["raycastTarget"] = new HashSet<string> { "bool" }
+                },
+                ["Button"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["interactable"] = new HashSet<string> { "bool" },
+                    ["color"] = new HashSet<string> { "Color", "string" },
+                    ["alpha"] = new HashSet<string> { "float", "int" },
+                    ["raycastTarget"] = new HashSet<string> { "bool" }
+                },
                 ["Toggle"] = new Dictionary<string, HashSet<string>> { ["interactable"] = new HashSet<string> { "bool" }, ["isOn"] = new HashSet<string> { "bool" } },
-                ["Slider"] = new Dictionary<string, HashSet<string>> { ["interactable"] = new HashSet<string> { "bool" }, ["value"] = new HashSet<string> { "float", "int" } },
-                ["Scrollbar"] = new Dictionary<string, HashSet<string>> { ["value"] = new HashSet<string> { "float", "int" } },
+                ["Slider"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["interactable"] = new HashSet<string> { "bool" },
+                    ["value"] = new HashSet<string> { "float", "int" },
+                    ["minValue"] = new HashSet<string> { "float", "int" },
+                    ["maxValue"] = new HashSet<string> { "float", "int" }
+                },
+                ["Scrollbar"] = new Dictionary<string, HashSet<string>>
+                {
+                    ["interactable"] = new HashSet<string> { "bool" },
+                    ["value"] = new HashSet<string> { "float", "int" },
+                    ["size"] = new HashSet<string> { "float", "int" }
+                },
                 ["InputField"] = new Dictionary<string, HashSet<string>> { ["interactable"] = new HashSet<string> { "bool" }, ["text"] = new HashSet<string> { "string" } },
                 ["Dropdown"] = new Dictionary<string, HashSet<string>> { ["interactable"] = new HashSet<string> { "bool" }, ["value"] = new HashSet<string> { "int" } },
                 ["VerticalList"] = new Dictionary<string, HashSet<string>> { ["items"] = new HashSet<string> { "IReadOnlyList<MessagePayload>" } }
@@ -107,6 +152,14 @@ namespace KK.UI.UMG.Editor.Validators
                 !properties.TryGetValue(binding.Property, out var allowedTypes))
             {
                 context.Add(KKUIPipelineIssueSeverity.Error, "BND008", $"Property '{binding.Property}' is not supported for control '{binding.ControlId}' of type '{node.Type}'.");
+                return;
+            }
+
+            if (node.Type == "Panel" &&
+                (binding.Property == "color" || binding.Property == "alpha" || binding.Property == "raycastTarget") &&
+                node.Image == null)
+            {
+                context.Add(KKUIPipelineIssueSeverity.Error, "BND008", $"Panel '{binding.ControlId}' property '{binding.Property}' requires an image spec so the generated prefab has an Image component.");
                 return;
             }
 

@@ -332,6 +332,11 @@ namespace KK.UI.UMG.Components
                 return string.Empty;
             }
 
+            if (string.Equals(property, "color", StringComparison.OrdinalIgnoreCase))
+            {
+                return Color.white;
+            }
+
             if (string.Equals(property, "sprite", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(property, "texture", StringComparison.OrdinalIgnoreCase))
             {
@@ -339,14 +344,36 @@ namespace KK.UI.UMG.Components
             }
 
             if (string.Equals(property, "interactable", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(property, "isOn", StringComparison.OrdinalIgnoreCase))
+                string.Equals(property, "isOn", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "raycastTarget", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            if (string.Equals(property, "value", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(property, "preserveAspect", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "fillClockwise", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.Equals(property, "alpha", StringComparison.OrdinalIgnoreCase))
+            {
+                return 1f;
+            }
+
+            if (string.Equals(property, "value", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "fillAmount", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "minValue", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "maxValue", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "size", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(property, "fontSize", StringComparison.OrdinalIgnoreCase))
             {
                 return 0f;
+            }
+
+            if (string.Equals(property, "fillOrigin", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
             }
 
             return null;
